@@ -1,0 +1,81 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+/*
+ * Tema Find Business: acento laranja nos dois modos.
+ * As variáveis são do HeroUI v3 (veja node_modules/@heroui/styles/dist/themes/default/variables.css).
+ * O next-themes coloca class="light" ou class="dark" no <html>.
+ *
+ * Hierarquia de superfícies (do fundo para a frente):
+ *   página (--background) → card (--surface) → campo (--field-background, com borda)
+ * Os campos ficam "afundados" no card: um tom diferente + borda visível.
+ */
+:root,
+.light,
+[data-theme="light"] {
+  --background: oklch(0.965 0.003 285);
+  --surface: oklch(1 0 0);
+  --surface-secondary: oklch(0.975 0.002 285);
+
+  --field-background: oklch(0.975 0.002 285);
+  --field-border: oklch(0.885 0.004 285);
+  --field-border-width: 1px;
+  --field-border-hover: oklch(0.8 0.006 285);
+  --field-border-focus: var(--accent);
+
+  --accent: oklch(0.66 0.19 48);
+  --accent-foreground: oklch(0.99 0 0);
+  --focus: var(--accent);
+}
+
+.dark,
+[data-theme="dark"] {
+  --background: oklch(0.145 0.004 285);
+  --surface: oklch(0.205 0.005 285);
+  --surface-secondary: oklch(0.24 0.005 285);
+  --surface-tertiary: oklch(0.265 0.005 285);
+  --overlay: oklch(0.215 0.005 285);
+  --separator: oklch(0.28 0.005 285);
+
+  --field-background: oklch(0.155 0.004 285);
+  --field-border: oklch(0.3 0.006 285);
+  --field-border-width: 1px;
+  --field-border-hover: oklch(0.38 0.008 285);
+  --field-border-focus: var(--accent);
+  --field-placeholder: oklch(0.6 0.012 285);
+
+  --accent: oklch(0.76 0.165 60);
+  --accent-foreground: oklch(0.2 0.02 60);
+  --focus: var(--accent);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Respiro padrão dos cards (o HeroUI usa p-4). className no componente ainda sobrescreve. */
+@layer components {
+  .card {
+    @apply gap-5 p-5 sm:p-6;
+  }
+  .card__header {
+    @apply gap-1;
+  }
+  .card__title {
+    @apply text-base font-semibold;
+  }
+  .card__content {
+    @apply gap-4;
+  }
+  /* Botão de mostrar senha dentro do campo: sem a linha divisória. */
+  .input-group__suffix {
+    border-inline-start-width: 0;
+    @apply pe-1.5;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
