@@ -1,7 +1,7 @@
 import type { LeadsState } from "@/store/slices/leadsSlice";
 import type { AnalysisState } from "@/store/slices/analysisSlice";
 import type { SettingsState } from "@/store/slices/settingsSlice";
-import type { SavedLead, SiteAnalysis } from "@/types/lead";
+import type { LeadActivity, SavedLead, SiteAnalysis } from "@/types/lead";
 
 export interface UserData {
   leads: LeadsState;
@@ -23,4 +23,7 @@ export interface DataAdapter {
   saveAnalyses(entries: [string, SiteAnalysis][]): Promise<void>;
   deleteAnalysis(id: string): Promise<void>;
   saveSettings(settings: SettingsState): Promise<void>;
+  /** Histórico de um lead, do mais recente para o mais antigo. */
+  listActivities(placeId: string): Promise<LeadActivity[]>;
+  addActivity(activity: LeadActivity): Promise<void>;
 }

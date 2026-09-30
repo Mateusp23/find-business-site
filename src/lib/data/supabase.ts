@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { mergeTemplates, templateOverrides } from "@/store/slices/settingsSlice";
-import type { SavedLead } from "@/types/lead";
+import type { LeadActivity, SavedLead } from "@/types/lead";
 import type { DataAdapter } from "./types";
 
 type LeadRow = Database["public"]["Tables"]["leads"]["Insert"];
@@ -17,10 +17,24 @@ const toRow = (userId: string, l: SavedLead): LeadRow => ({
   notes: l.notes,
   saved_at: l.savedAt,
   last_contact_at: l.lastContactAt,
+  next_follow_up_on: l.nextFollowUpOn,
 });
 
-function check(error: { message: string } | null) {
-  if (error) throw new Error(error.message);
+const MIGRATION_HINT =
+  "O banco está desatualizado: rode os arquivos de supabase/migrations no SQL Editor do Supabase (veja o README).";
+
+function check(error: { message: string; code?: string } | null) {
+  if (!error) return;
+  // Coluna ou tabela que não existe = migração nova ainda não aplicada no Supabase.
+  if (
+    error.code === "PGRST204" ||
+    error.code === "PGRST205" ||
+    error.code === "42P01" ||
+    error.code === "42703"
+  ) {
+    throw new Error(MIGRATION_HINT);
+  }
+  throw new Error(error.message);
 }
 
 /** Dados no Supabase, protegidos por RLS (cada usuário só vê os próprios). */
@@ -56,13 +70,17 @@ export function supabaseAdapter(supabase: SupabaseClient<Database>, userId: stri
                 notes: r.notes,
                 savedAt: r.saved_at,
                 lastContactAt: r.last_contact_at,
+                nextFollowUpOn: r.next_follow_up_on ?? null,
               } satisfies SavedLead,
             ]),
           ),
         },
         analysis: {
           byId: Object.fromEntries(
-            (analyses.data ?? []).map((r) => [r.analysis_id, { status: "done" as const, data: r.data }]),
+            (analyses.data ?? []).map((r) => [
+              r.analysis_id,
+              { status: "done" as const, data: r.data },
+            ]),
           ),
         },
         settings: p
@@ -106,6 +124,36 @@ export function supabaseAdapter(supabase: SupabaseClient<Database>, userId: stri
     },
     async deleteAnalysis(id) {
       check((await supabase.from("site_analyses").delete().eq("analysis_id", id)).error);
+    },
+    async listActivities(placeId) {
+      const { data, error } = await supabase
+        .from("lead_activities")
+        .select("*")
+        .eq("place_id", placeId)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      check(error);
+      return (data ?? []).map((r): LeadActivity => ({
+        id: r.id,
+        placeId: r.place_id,
+        type: r.type,
+        data: r.data,
+        createdAt: r.created_at,
+      }));
+    },
+    async addActivity(a) {
+      check(
+        (
+          await supabase.from("lead_activities").insert({
+            id: a.id,
+            user_id: userId,
+            place_id: a.placeId,
+            type: a.type,
+            data: a.data,
+            created_at: a.createdAt,
+          })
+        ).error,
+      );
     },
     async saveSettings(settings) {
       check(

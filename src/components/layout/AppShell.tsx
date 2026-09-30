@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, Gauge, MessageSquareText, Settings, Star, UserRound } from "lucide-react";
+import { followUpState, isDue } from "@/lib/followUp";
 import { useAppSelector } from "@/store/hooks";
 import { BrandLogo } from "./BrandLogo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -20,6 +21,12 @@ const NAV = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const leadCount = useAppSelector((s) => Object.keys(s.leads.byId).length);
+  // Leads com retorno para hoje ou atrasados: aparece em destaque no menu.
+  const dueCount = useAppSelector(
+    (s) =>
+      Object.values(s.leads.byId).filter((l) => isDue(followUpState(l.nextFollowUpOn, l.status)))
+        .length,
+  );
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -45,7 +52,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="size-4" />
                 <span>{label}</span>
-                {href === "/leads" && leadCount > 0 && (
+                {href === "/leads" && dueCount > 0 && (
+                  <span
+                    className="ml-auto rounded-full bg-warning px-2 text-xs font-medium text-warning-foreground"
+                    title={`${dueCount} para retornar hoje`}
+                  >
+                    {dueCount}
+                  </span>
+                )}
+                {href === "/leads" && dueCount === 0 && leadCount > 0 && (
                   <span className="ml-auto rounded-full bg-default px-2 text-xs text-muted">
                     {leadCount}
                   </span>

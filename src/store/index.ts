@@ -12,6 +12,12 @@ import settingsReducer, * as settings from "./slices/settingsSlice";
 import leadsReducer, * as leads from "./slices/leadsSlice";
 import analysisReducer, { clearAnalysis, runAnalysis } from "./slices/analysisSlice";
 import sessionReducer, { signedOut, type SessionState } from "./slices/sessionSlice";
+import activitiesReducer, {
+  activityAdded,
+  activityRemoved,
+  newActivity,
+} from "./slices/activitiesSlice";
+import { formatDateISO } from "@/lib/followUp";
 import { getDataAdapter } from "@/lib/data";
 import { notify } from "@/lib/notify";
 import { feedback } from "./feedback";
@@ -22,6 +28,7 @@ const appReducer = combineReducers({
   settings: settingsReducer,
   leads: leadsReducer,
   analysis: analysisReducer,
+  activities: activitiesReducer,
   [findBusinessApi.reducerPath]: findBusinessApi.reducer,
 });
 
@@ -58,6 +65,19 @@ function reportSaveError(err: unknown) {
 
 const statusLabel = (id: string) => leads.LEAD_STATUS.find((s) => s.id === id)?.label ?? id;
 
+/**
+ * Fila por lead: as gravações de um mesmo lead acontecem em ordem.
+ * Necessário porque o histórico (lead_activities) aponta para o lead: a linha do lead
+ * precisa existir antes da primeira atividade.
+ */
+const leadQueues = new Map<string, Promise<unknown>>();
+function enqueue<T>(placeId: string, task: () => Promise<T>): Promise<T> {
+  const previous = leadQueues.get(placeId) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(task);
+  leadQueues.set(placeId, next);
+  return next;
+}
+
 /** Anotações esperam a pessoa parar de digitar antes de salvar. */
 const noteTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -68,6 +88,7 @@ persistence.startListening({
     leads.setLeadStatus,
     leads.setLeadNotes,
     leads.markContacted,
+    leads.setFollowUp,
   ),
   effect: (action, api) => {
     const adapter = getDataAdapter();
@@ -89,13 +110,20 @@ persistence.startListening({
       if (leads.setLeadStatus.match(action))
         return ["Etapa atualizada", `${name}: ${statusLabel(action.payload.status)}`];
       if (leads.setLeadNotes.match(action)) return ["Anotação salva", name];
+      if (leads.setFollowUp.match(action)) {
+        const on = action.payload.on;
+        return on
+          ? ["Próximo contato agendado", `${name}: ${formatDateISO(on)}`]
+          : ["Próximo contato removido", name];
+      }
       if (leads.markContacted.match(action)) {
-        // Lead recém-salvo pelo botão do WhatsApp: o toast "Lead salvo" já basta.
-        const justSaved = before && Date.now() - new Date(before.savedAt).getTime() < 2000;
-        if (justSaved) return null;
+        const followUp =
+          lead?.nextFollowUpOn && lead.nextFollowUpOn !== before?.nextFollowUpOn
+            ? `Retorno agendado para ${formatDateISO(lead.nextFollowUpOn)}`
+            : name;
         return before?.status === "novo"
-          ? ["Lead movido para “Contatado”", name]
-          : ["Contato registrado", name];
+          ? ["Lead movido para “Contatado”", followUp]
+          : ["Contato registrado", followUp];
       }
       return null;
     };
@@ -103,8 +131,7 @@ persistence.startListening({
     const save = () => {
       const lead = (api.getState() as RootState).leads.byId[placeId];
       if (!lead) return;
-      adapter
-        .saveLead(lead)
+      enqueue(placeId, () => adapter.saveLead(lead))
         .then(() => {
           const t = successToast();
           if (t) notify.success(t[0], { description: t[1] });
@@ -125,8 +152,9 @@ persistence.startListening({
   actionCreator: leads.removeLead,
   effect: (action, api) => {
     const removed = (api.getOriginalState() as RootState).leads.byId[action.payload];
-    getDataAdapter()
-      ?.deleteLead(action.payload)
+    const adapter = getDataAdapter();
+    if (!adapter) return;
+    enqueue(action.payload, () => adapter.deleteLead(action.payload))
       .then(() => {
         if (!removed) return;
         notify.info("Lead removido", {
@@ -153,6 +181,72 @@ persistence.startListening({
   actionCreator: clearAnalysis,
   effect: (action) => {
     getDataAdapter()?.deleteAnalysis(action.payload).catch(reportSaveError);
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// Histórico: cada ação relevante vira uma linha em lead_activities.
+// ─────────────────────────────────────────────────────────────
+persistence.startListening({
+  actionCreator: activityAdded,
+  effect: ({ payload: a }, api) => {
+    const adapter = getDataAdapter();
+    if (!adapter) return;
+    enqueue(a.placeId, () => adapter.addActivity(a))
+      .then(() => {
+        if (a.type === "note") notify.success("Anotação adicionada ao histórico");
+      })
+      .catch((err) => {
+        api.dispatch(activityRemoved({ placeId: a.placeId, id: a.id }));
+        reportSaveError(err);
+      });
+  },
+});
+
+persistence.startListening({
+  matcher: isAnyOf(leads.saveLead, leads.setLeadStatus, leads.markContacted, leads.setFollowUp),
+  effect: (action, api) => {
+    const payload = (
+      action as unknown as { payload: { placeId?: string; business?: { placeId: string } } }
+    ).payload;
+    const placeId = payload.placeId ?? payload.business?.placeId;
+    if (!placeId) return;
+    const before = (api.getOriginalState() as RootState).leads.byId[placeId];
+    const after = (api.getState() as RootState).leads.byId[placeId];
+    if (!after) return;
+    const add = (...args: Parameters<typeof newActivity>) =>
+      api.dispatch(activityAdded(newActivity(...args)));
+
+    if (leads.saveLead.match(action) && !before) add(placeId, "saved");
+    if (before && before.status !== after.status) {
+      add(placeId, "status_changed", { from: before.status, to: after.status });
+    }
+    if (leads.markContacted.match(action)) {
+      add(placeId, "message_sent", {
+        channel: "whatsapp",
+        templateId: action.payload.templateId,
+        templateLabel: action.payload.templateLabel,
+      });
+    }
+    if (before && before.nextFollowUpOn !== after.nextFollowUpOn) {
+      add(placeId, "follow_up_set", {
+        on: after.nextFollowUpOn,
+        auto: leads.markContacted.match(action),
+      });
+    }
+  },
+});
+
+/** Análise de site de um lead salvo também entra no histórico. */
+persistence.startListening({
+  actionCreator: runAnalysis.fulfilled,
+  effect: ({ payload, meta }, api) => {
+    if (!(api.getState() as RootState).leads.byId[meta.arg.id]) return;
+    api.dispatch(
+      activityAdded(
+        newActivity(meta.arg.id, "analysis", { quality: payload.quality, isWeak: payload.isWeak }),
+      ),
+    );
   },
 });
 

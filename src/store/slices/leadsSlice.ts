@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { AUTO_FOLLOW_UP_DAYS, addDaysISO, todayISO } from "@/lib/followUp";
 import type { Business, LeadStatus, SavedLead } from "@/types/lead";
 
 export interface LeadsState {
@@ -22,7 +23,9 @@ const leadsSlice = createSlice({
   initialState,
   reducers: {
     hydrateLeads(_state, action: PayloadAction<LeadsState>) {
-      return action.payload;
+      const byId = { ...action.payload.byId };
+      for (const [id, l] of Object.entries(byId)) byId[id] = { ...l, nextFollowUpOn: l.nextFollowUpOn ?? null };
+      return { byId };
     },
     saveLead(
       state,
@@ -41,6 +44,7 @@ const leadsSlice = createSlice({
             notes: "",
             savedAt: new Date().toISOString(),
             lastContactAt: null,
+            nextFollowUpOn: null,
           };
     },
     /** Volta um lead removido exatamente como estava (botão "Desfazer" do toast). */
@@ -58,16 +62,39 @@ const leadsSlice = createSlice({
       const lead = state.byId[action.payload.placeId];
       if (lead) lead.notes = action.payload.notes;
     },
-    /** Chamado ao abrir o WhatsApp: marca o contato e avança "novo" → "contatado". */
-    markContacted(state, action: PayloadAction<string>) {
-      const lead = state.byId[action.payload];
+    /**
+     * Chamado ao abrir o WhatsApp: registra o contato, avança "novo" → "contatado" e,
+     * se não houver próximo contato futuro, agenda um follow-up automático.
+     */
+    markContacted(
+      state,
+      action: PayloadAction<{ placeId: string; templateId?: string; templateLabel?: string }>,
+    ) {
+      const lead = state.byId[action.payload.placeId];
       if (!lead) return;
       lead.lastContactAt = new Date().toISOString();
       if (lead.status === "novo") lead.status = "contatado";
+      const today = todayISO();
+      if (!lead.nextFollowUpOn || lead.nextFollowUpOn <= today) {
+        lead.nextFollowUpOn = addDaysISO(today, AUTO_FOLLOW_UP_DAYS);
+      }
+    },
+    /** Define (ou remove, com null) a data do próximo contato. */
+    setFollowUp(state, action: PayloadAction<{ placeId: string; on: string | null }>) {
+      const lead = state.byId[action.payload.placeId];
+      if (lead) lead.nextFollowUpOn = action.payload.on;
     },
   },
 });
 
-export const { hydrateLeads, saveLead, restoreLead, removeLead, setLeadStatus, setLeadNotes, markContacted } =
-  leadsSlice.actions;
+export const {
+  hydrateLeads,
+  saveLead,
+  restoreLead,
+  removeLead,
+  setLeadStatus,
+  setLeadNotes,
+  markContacted,
+  setFollowUp,
+} = leadsSlice.actions;
 export default leadsSlice.reducer;

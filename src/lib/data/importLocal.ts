@@ -35,6 +35,11 @@ export async function importLocalData(
 
   await remote.saveLeads(leads);
   await remote.saveAnalyses(analyses);
+  // Histórico dos leads importados (depois dos leads, por causa da chave estrangeira).
+  for (const l of leads) {
+    const history = await localAdapter.listActivities(l.business.placeId);
+    for (const a of [...history].reverse()) await remote.addActivity(a);
+  }
 
   const localTemplates = templateOverrides(local.settings.templates ?? []);
   const remoteTemplates = templateOverrides(remoteData.settings.templates ?? []);
@@ -44,7 +49,9 @@ export async function importLocalData(
       userName: remoteData.settings.userName || local.settings.userName || user.name,
       serviceId: remoteData.settings.serviceId ?? local.settings.serviceId ?? "site",
       theme: remoteData.settings.theme ?? local.settings.theme ?? "dark",
-      templates: remoteTemplates.length ? remoteData.settings.templates! : local.settings.templates!,
+      templates: remoteTemplates.length
+        ? remoteData.settings.templates!
+        : local.settings.templates!,
     });
   }
 

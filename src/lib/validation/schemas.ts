@@ -88,3 +88,11 @@ export const profileSchema = z.object({
   theme: z.enum(["dark", "light", "system"]),
 });
 export type ProfileValues = z.infer<typeof profileSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Leads
+// ─────────────────────────────────────────────────────────────
+export const noteSchema = z.object({
+  text: z.string().trim().min(1, "Escreva a anotação.").max(1000, "Máximo de 1.000 caracteres."),
+});
+export type NoteValues = z.infer<typeof noteSchema>;

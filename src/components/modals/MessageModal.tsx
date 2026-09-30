@@ -68,7 +68,8 @@ function MessageModalBody({ lead, onClose }: { lead: LeadContext; onClose: () =>
 
   const openWhatsapp = () => {
     dispatch(saveLead(lead));
-    dispatch(markContacted(b.placeId));
+    const template = templates.find((t) => t.id === templateId);
+    dispatch(markContacted({ placeId: b.placeId, templateId, templateLabel: template?.label }));
     window.open(whatsappUrl(b.phoneE164, text), "_blank", "noopener");
     onClose();
   };

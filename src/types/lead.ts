@@ -58,6 +58,43 @@ export interface SavedLead {
   notes: string;
   savedAt: string;
   lastContactAt: string | null;
+  /** Próximo contato combinado (data "AAAA-MM-DD", sem hora). */
+  nextFollowUpOn: string | null;
+}
+
+export type LeadActivityType =
+  | "saved"
+  | "message_sent"
+  | "status_changed"
+  | "note"
+  | "follow_up_set"
+  | "analysis";
+
+/** Uma linha do histórico de um lead. `data` varia por tipo (veja LeadActivityData). */
+export interface LeadActivity {
+  id: string;
+  placeId: string;
+  type: LeadActivityType;
+  data: LeadActivityData;
+  createdAt: string;
+}
+
+export interface LeadActivityData {
+  /** message_sent */
+  templateId?: string;
+  templateLabel?: string;
+  channel?: "whatsapp";
+  /** status_changed */
+  from?: LeadStatus;
+  to?: LeadStatus;
+  /** note */
+  text?: string;
+  /** follow_up_set (null = removido) */
+  on?: string | null;
+  auto?: boolean;
+  /** analysis */
+  quality?: number;
+  isWeak?: boolean;
 }
 
 export interface Municipio {

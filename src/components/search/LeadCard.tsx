@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button, Card, Chip, buttonVariants } from "@heroui/react";
 import {
   Check,
@@ -34,6 +35,10 @@ interface LeadCardProps {
   onToggleSave: () => void;
   analysis?: AnalysisEntry;
   onAnalyze?: () => void;
+  /** Link da página do lead (deixa o nome clicável). */
+  href?: string;
+  /** Etiquetas extras ao lado de "Sem site" / nota (ex.: próximo contato). */
+  badges?: React.ReactNode;
   /** Conteúdo extra no rodapé do card (ex.: status do pipeline na tela de leads). */
   footer?: React.ReactNode;
 }
@@ -46,13 +51,23 @@ export function LeadCard({
   onToggleSave,
   analysis,
   onAnalyze,
+  href,
+  badges,
   footer,
 }: LeadCardProps) {
   return (
     <Card className="gap-4">
       <Card.Header className="flex-row items-start justify-between gap-4">
         <div className="min-w-0">
-          <Card.Title className="truncate text-base">{b.name}</Card.Title>
+          <Card.Title className="truncate text-base">
+            {href ? (
+              <Link href={href} className="hover:text-accent hover:underline">
+                {b.name}
+              </Link>
+            ) : (
+              b.name
+            )}
+          </Card.Title>
           {b.category && <Card.Description>{b.category}</Card.Description>}
         </div>
         <div className="shrink-0 text-right">
@@ -74,6 +89,7 @@ export function LeadCard({
               {b.rating.toFixed(1)} · {b.reviewCount}
             </Chip>
           )}
+          {badges}
         </div>
 
         <div className="space-y-1.5 text-sm text-muted">
@@ -129,7 +145,11 @@ export function LeadCard({
           Prompt do site
         </Button>
         <Button size="sm" variant="ghost" onPress={onToggleSave}>
-          {isSaved ? <BookmarkCheck className="size-4 text-accent" /> : <Bookmark className="size-4" />}
+          {isSaved ? (
+            <BookmarkCheck className="size-4 text-accent" />
+          ) : (
+            <Bookmark className="size-4" />
+          )}
           {isSaved ? "Salvo" : "Salvar"}
         </Button>
         {b.mapsUrl && (

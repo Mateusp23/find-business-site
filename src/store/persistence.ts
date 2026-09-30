@@ -2,6 +2,7 @@ export const STORAGE_KEYS = {
   leads: "fb:leads:v1",
   settings: "fb:settings:v1",
   analysis: "fb:analysis:v1",
+  activities: "fb:activities:v1",
 } as const;
 
 export function loadFromStorage<T>(key: string): T | null {

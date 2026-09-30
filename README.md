@@ -17,7 +17,7 @@ Sem nenhuma chave o app já funciona: sem Supabase ele fica em **modo local** (s
 ### Supabase (login, cadastro e dados na nuvem)
 
 1. Crie um projeto em [supabase.com](https://supabase.com) (região **South America (São Paulo)**).
-2. **SQL Editor → New query**, cole o conteúdo de `supabase/migrations/0001_init.sql` e clique em **Run**. Isso cria as tabelas `profiles`, `leads` e `site_analyses`, com RLS (cada usuário só vê os próprios dados) e o gatilho que cria o perfil no cadastro.
+2. **SQL Editor → New query**: rode **cada arquivo de `supabase/migrations/` em ordem** (`0001_init.sql`, `0002_lead_detail.sql`...), colando o conteúdo e clicando em **Run**. Eles criam as tabelas `profiles`, `leads`, `site_analyses` e `lead_activities`, com RLS (cada usuário só vê os próprios dados). Todos podem ser rodados de novo sem estragar nada. Sempre que um arquivo novo aparecer nessa pasta, rode ele também; se esquecer, o app avisa "O banco está desatualizado".
 3. **Project Settings → API Keys:** copie a *Project URL* e a *Publishable key* para `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` no `.env.local`.
 4. **Authentication → URL Configuration:** *Site URL* = `http://localhost:3000`; em *Redirect URLs* adicione `http://localhost:3000/**`. Quando publicar, adicione também o domínio de produção.
 5. **E-mail:** o cadastro por e-mail já vem ativo, com confirmação por link. O envio de e-mails padrão do Supabase é limitado (poucos por hora). Para testar à vontade, desligue *Confirm email* em **Authentication → Sign In / Providers → Email**, ou configure um SMTP próprio (ex.: Resend).
@@ -56,7 +56,7 @@ src/
 │   ├── (app)/                    Telas com a barra lateral
 │   │   ├── page.tsx              Buscar empresas
 │   │   ├── analisar/             Analisar qualquer site (PageSpeed)
-│   │   ├── leads/                Leads salvos (funil: novo → contatado → ... → fechado)
+│   │   ├── leads/                Leads salvos (funil) e leads/[placeId]: página de cada lead
 │   │   ├── mensagens/            Editor dos modelos de mensagem
 │   │   ├── perfil/               Nome, serviço padrão, tema, trocar senha, sair
 │   │   └── ajustes/              Status das integrações
@@ -104,6 +104,16 @@ O botão **Analisar N sites** roda o PageSpeed (celular) em todos os resultados 
 - Os resultados ficam salvos no navegador (últimos 300 sites).
 
 **Pontuação (0–100):** base pela categoria + movimento (nº de avaliações) + reputação (nota) + contato (telefone, bônus se for celular = provável WhatsApp).
+
+## Página do lead e próximo contato
+
+Cada lead salvo tem uma página (`/leads/[placeId]`) com:
+
+- **Histórico** automático: lead salvo, mensagem enviada (com o modelo usado), mudança de etapa, próximo contato agendado e análise do site. Dá para adicionar anotações com data.
+- **Próximo contato:** data do retorno, com atalhos (hoje, amanhã, 3 dias, 1 e 2 semanas). Ao mandar mensagem pelo WhatsApp, o retorno é agendado sozinho para daqui a 3 dias se não houver outro no futuro.
+- Dados do Google, análise do site, anotações gerais, ligar, Maps e busca do Instagram.
+
+Na lista de leads, quem tem retorno hoje ou atrasado aparece primeiro, com etiqueta colorida, um aviso no topo e o número em destaque no menu.
 
 ## Formulários
 
@@ -162,6 +172,10 @@ Carregamentos automáticos (lista de cidades, status das integrações) só avis
 - [x] **Fase 1:** busca com a API oficial do Google, classificação, mensagens, prompt do site, leads salvos no navegador
 - [x] **Fase 2:** "site fraco" de verdade com PageSpeed Insights, página "Analisar site", modo demonstração
 - [x] **Fase 3:** Supabase: login (e-mail/senha e Google), cadastro, recuperação de senha, perfil, tema claro/escuro/sistema, leads e análises na nuvem
+- [x] Página do lead com histórico e próximo contato (follow-up)
+- [ ] Segurança: 2FA, limite de requisições (rate limit), cabeçalhos de segurança
+- [ ] Lista: agrupar por nicho/cidade, busca por nome, visão em colunas por etapa
+- [ ] Taxa de resposta por modelo de mensagem
 - [ ] Antes de comercializar: revisar o que guardamos do Google. Hoje o lead salva uma cópia dos dados da empresa; os termos do Google Maps restringem guardar dados além do `place_id`
 - [ ] **Fase 4:** GPT para mensagem personalizada e prompt de site mais rico
 - [ ] **Fase 5:** planos/Stripe, se for comercializar
