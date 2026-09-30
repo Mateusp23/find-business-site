@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MailCheck } from "lucide-react";
+import { useCaptcha } from "@/components/auth/Captcha";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { LocalModeNotice } from "@/components/auth/LocalModeNotice";
 import { FormTextField, SubmitButton } from "@/components/form";
@@ -16,6 +17,7 @@ import { forgotPasswordSchema, type ForgotPasswordValues } from "@/lib/validatio
 
 export default function EsqueciSenhaPage() {
   const [sent, setSent] = useState(false);
+  const captcha = useCaptcha();
   const { control, handleSubmit, formState, getValues } = useForm<ForgotPasswordValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: "" },
@@ -26,7 +28,9 @@ export default function EsqueciSenhaPage() {
   const onSubmit = handleSubmit(async ({ email }) => {
     const { error } = await getSupabaseBrowser()!.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/redefinir-senha`,
+      captchaToken: captcha.token ?? undefined,
     });
+    captcha.reset();
     if (error) return notify.error("Não foi possível enviar o link", authErrorMessage(error));
     setSent(true);
   });
@@ -62,7 +66,10 @@ export default function EsqueciSenhaPage() {
             autoFocus
             isRequired
           />
-          <SubmitButton isSubmitting={formState.isSubmitting}>Enviar link</SubmitButton>
+          {captcha.widget}
+          <SubmitButton isSubmitting={formState.isSubmitting} isDisabled={!captcha.ready}>
+            Enviar link
+          </SubmitButton>
         </form>
       )}
     </AuthCard>

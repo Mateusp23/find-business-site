@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { ApiError } from "@/lib/api/errors";
-import { jsonError, withApiErrors } from "@/lib/api/handler.server";
+import { withApiErrors } from "@/lib/api/handler.server";
+import { RATE_LIMITS, enforceRateLimit } from "@/lib/api/rateLimit.server";
+import { requireSession } from "@/lib/api/session.server";
+import { apiUfSchema } from "@/lib/validation/api";
 import type { Municipio } from "@/types/lead";
 
 export const GET = withApiErrors(
-  async (_req: Request, ctx: RouteContext<"/api/ibge/municipios/[uf]">) => {
-    const { uf } = await ctx.params;
-    if (!/^[A-Za-z]{2}$/.test(uf)) return jsonError(400, "UF inválida.", "VALIDATION");
+  async (request: Request, ctx: RouteContext<"/api/ibge/municipios/[uf]">) => {
+    const session = await requireSession();
+    const uf = apiUfSchema.parse((await ctx.params).uf);
+    await enforceRateLimit(session, RATE_LIMITS.cities, request);
 
     const res = await fetch(
       `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf.toUpperCase()}/municipios?orderBy=nome`,

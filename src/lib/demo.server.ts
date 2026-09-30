@@ -8,9 +8,27 @@ import { classifyWebsite, scoreBusiness } from "./classify";
  * Empresas FICTÍCIAS, sem telefone real (o WhatsApp abre sem destinatário).
  * Os sites apontam para páginas públicas de teste, então a análise de site funciona de verdade.
  */
-const SURNAMES = ["Almeida", "Brasil", "Central", "Costa", "Rocha", "Moura", "Nogueira", "Prado", "Ribeiro", "Souza", "Teixeira", "Vieira"];
+const SURNAMES = [
+  "Almeida",
+  "Brasil",
+  "Central",
+  "Costa",
+  "Rocha",
+  "Moura",
+  "Nogueira",
+  "Prado",
+  "Ribeiro",
+  "Souza",
+  "Teixeira",
+  "Vieira",
+];
 
-const SAMPLES: { website: string | null; rating: number | null; reviews: number; mobile: boolean }[] = [
+const SAMPLES: {
+  website: string | null;
+  rating: number | null;
+  reviews: number;
+  mobile: boolean;
+}[] = [
   { website: null, rating: 4.8, reviews: 62, mobile: true },
   { website: null, rating: 4.6, reviews: 23, mobile: true },
   { website: "https://www.instagram.com/", rating: 5, reviews: 9, mobile: true },

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MailCheck } from "lucide-react";
+import { useCaptcha } from "@/components/auth/Captcha";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 import { FormPasswordField, FormTextField, SubmitButton } from "@/components/form";
@@ -17,6 +18,7 @@ import { MIN_PASSWORD, signupSchema, type SignupValues } from "@/lib/validation/
 export function SignupForm({ next }: { next: string }) {
   const router = useRouter();
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const captcha = useCaptcha();
   const { control, handleSubmit, formState } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { name: "", email: "", password: "", confirm: "" },
@@ -29,8 +31,10 @@ export function SignupForm({ next }: { next: string }) {
       options: {
         data: { full_name: name },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        captchaToken: captcha.token ?? undefined,
       },
     });
+    captcha.reset();
     if (error) return notify.error("Não foi possível criar a conta", authErrorMessage(error));
 
     // Com "Confirm email" ligado no Supabase, a sessão só existe depois do clique no e-mail.
@@ -123,7 +127,10 @@ export function SignupForm({ next }: { next: string }) {
           label="Confirmar senha"
           autoComplete="new-password"
         />
-        <SubmitButton isSubmitting={formState.isSubmitting}>Criar conta</SubmitButton>
+        {captcha.widget}
+        <SubmitButton isSubmitting={formState.isSubmitting} isDisabled={!captcha.ready}>
+          Criar conta
+        </SubmitButton>
       </form>
     </AuthCard>
   );

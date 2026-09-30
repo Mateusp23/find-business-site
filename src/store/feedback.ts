@@ -23,6 +23,15 @@ feedback.startListening({
     isRejectedWithValue(action) &&
     (action.meta as { arg?: { endpointName?: string } }).arg?.endpointName !== undefined,
   effect: (action) => {
+    // Sessão caiu ou falta o código do 2FA: leva para a tela certa em vez de só avisar.
+    const code = (action as { payload?: { data?: { code?: string } } }).payload?.data?.code ?? "";
+    if (code === "UNAUTHORIZED" || code === "MFA_REQUIRED") {
+      const next = encodeURIComponent(window.location.pathname);
+      window.location.assign(
+        code === "MFA_REQUIRED" ? `/verificar-2fa?next=${next}` : `/login?next=${next}`,
+      );
+      return;
+    }
     const endpoint = (action.meta as { arg: { endpointName: string } }).arg.endpointName;
     const title = endpoint in API_ERROR_TITLES ? API_ERROR_TITLES[endpoint] : "Algo deu errado";
     if (title) notify.error(title, (action as { payload?: unknown }).payload);

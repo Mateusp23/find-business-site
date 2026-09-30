@@ -5,17 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useCaptcha } from "@/components/auth/Captcha";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 import { FormPasswordField, FormTextField, SubmitButton } from "@/components/form";
 import { notify } from "@/lib/notify";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { authErrorMessage } from "@/lib/supabase/errors";
+import { needsMfaVerification } from "@/lib/supabase/mfa";
 import { loginSchema, type LoginValues } from "@/lib/validation/schemas";
 
 const NOTICES: Record<string, string> = {
   "senha-alterada": "Senha alterada. Entre com a nova senha.",
   saiu: "Você saiu da sua conta.",
+  "saiu-todos": "Você saiu da conta em todos os dispositivos.",
 };
 
 export function LoginForm({
@@ -28,6 +31,7 @@ export function LoginForm({
   notice: string | null;
 }) {
   const router = useRouter();
+  const captcha = useCaptcha();
   const { control, handleSubmit, formState } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -53,8 +57,15 @@ export function LoginForm({
     const { error } = await getSupabaseBrowser()!.auth.signInWithPassword({
       email,
       password,
+      options: { captchaToken: captcha.token ?? undefined },
     });
+    captcha.reset(); // o token do captcha só vale para uma tentativa
     if (error) return notify.error("Não foi possível entrar", authErrorMessage(error));
+    // Conta com 2FA: ainda falta o código do app autenticador.
+    if (await needsMfaVerification(getSupabaseBrowser()!)) {
+      router.replace(`/verificar-2fa?next=${encodeURIComponent(next)}`);
+      return;
+    }
     router.replace(next);
     router.refresh();
   });
@@ -99,7 +110,10 @@ export function LoginForm({
         >
           Esqueci minha senha
         </Link>
-        <SubmitButton isSubmitting={formState.isSubmitting}>Entrar</SubmitButton>
+        {captcha.widget}
+        <SubmitButton isSubmitting={formState.isSubmitting} isDisabled={!captcha.ready}>
+          Entrar
+        </SubmitButton>
       </form>
     </AuthCard>
   );

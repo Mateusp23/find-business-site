@@ -259,14 +259,16 @@ persistence.startListening({
     settings.updateTemplate,
     settings.resetTemplate,
   ),
-  effect: (_action, api) => {
+  effect: (action, api) => {
     clearTimeout(settingsTimer);
+    // Tema salva na hora (a pessoa pode recarregar logo depois); texto espera parar de digitar.
+    const delay = settings.setThemePreference.match(action) ? 0 : 700;
     settingsTimer = setTimeout(() => {
       getDataAdapter()
         ?.saveSettings((api.getState() as RootState).settings)
         .then(() => notify.success("Alterações salvas"))
         .catch(reportSaveError);
-    }, 700);
+    }, delay);
   },
 });
 

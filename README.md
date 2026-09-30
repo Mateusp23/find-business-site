@@ -167,13 +167,17 @@ Todas as rotas usam `withApiErrors` (`src/lib/api/handler.server.ts`) e responde
 
 Carregamentos automáticos (lista de cidades, status das integrações) só avisam quando dão erro, para não encher a tela de toasts.
 
+## Segurança
+
+Veja **[SECURITY.md](SECURITY.md)**: o que o código já protege (2FA, rate limit, CSP, RLS) e o checklist do que ligar no painel do Supabase, do Google Cloud e do GitHub.
+
 ## Roadmap
 
 - [x] **Fase 1:** busca com a API oficial do Google, classificação, mensagens, prompt do site, leads salvos no navegador
 - [x] **Fase 2:** "site fraco" de verdade com PageSpeed Insights, página "Analisar site", modo demonstração
 - [x] **Fase 3:** Supabase: login (e-mail/senha e Google), cadastro, recuperação de senha, perfil, tema claro/escuro/sistema, leads e análises na nuvem
 - [x] Página do lead com histórico e próximo contato (follow-up)
-- [ ] Segurança: 2FA, limite de requisições (rate limit), cabeçalhos de segurança
+- [x] Segurança: 2FA, rate limit, CSP e cabeçalhos, validação no servidor, RLS reforçado (veja [SECURITY.md](SECURITY.md))
 - [ ] Lista: agrupar por nicho/cidade, busca por nome, visão em colunas por etapa
 - [ ] Taxa de resposta por modelo de mensagem
 - [ ] Antes de comercializar: revisar o que guardamos do Google. Hoje o lead salva uma cópia dos dados da empresa; os termos do Google Maps restringem guardar dados além do `place_id`

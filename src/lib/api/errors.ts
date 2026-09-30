@@ -15,6 +15,8 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public code = "API_ERROR",
+    /** Cabeçalhos extras da resposta (ex.: Retry-After no 429). */
+    public headers: Record<string, string> = {},
   ) {
     super(message);
   }

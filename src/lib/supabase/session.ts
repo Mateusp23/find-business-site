@@ -13,7 +13,8 @@ export interface SessionUser {
 export function toSessionUser(user: User | null | undefined): SessionUser | null {
   if (!user) return null;
   const meta = user.user_metadata ?? {};
-  const providers = (user.app_metadata?.providers as string[] | undefined) ??
+  const providers =
+    (user.app_metadata?.providers as string[] | undefined) ??
     (user.app_metadata?.provider ? [user.app_metadata.provider as string] : []);
   return {
     id: user.id,

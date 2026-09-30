@@ -145,7 +145,9 @@ export function buildSitePrompt(ctx: {
 }) {
   const { business: b } = ctx;
   const reputation =
-    b.rating !== null ? `nota ${b.rating.toFixed(1)} com ${b.reviewCount} avaliações` : "sem avaliações";
+    b.rating !== null
+      ? `nota ${b.rating.toFixed(1)} com ${b.reviewCount} avaliações`
+      : "sem avaliações";
   const whatsapp = b.phoneE164 && b.isMobile ? `https://wa.me/${b.phoneE164}` : null;
 
   return `Crie um site institucional moderno, rápido e responsivo (mobile first) para a empresa abaixo.
@@ -161,10 +163,10 @@ export function buildSitePrompt(ctx: {
 - Ficha no Google Maps: ${b.mapsUrl ?? "não disponível"}
 
 ${
-    ctx.analysis?.issues.length
-      ? `## Problemas do site atual (nota ${ctx.analysis.quality}/100 no PageSpeed, celular)\n${ctx.analysis.issues.map((i) => `- ${i.label}`).join("\n")}\nO novo site precisa resolver todos esses pontos.\n\n`
-      : ""
-  }## Objetivo do site
+  ctx.analysis?.issues.length
+    ? `## Problemas do site atual (nota ${ctx.analysis.quality}/100 no PageSpeed, celular)\n${ctx.analysis.issues.map((i) => `- ${i.label}`).join("\n")}\nO novo site precisa resolver todos esses pontos.\n\n`
+    : ""
+}## Objetivo do site
 Transformar quem pesquisa "${ctx.niche.toLowerCase()} em ${ctx.city}" no Google em contato no ${whatsapp ? "WhatsApp" : "telefone"}. O botão de contato deve aparecer no topo, no meio e no fim da página, e fixo no celular.
 
 ## Estrutura

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { authErrorMessage } from "@/lib/supabase/errors";
 import { safeNext } from "@/lib/supabase/routes";
+import { needsMfaVerification } from "@/lib/supabase/mfa";
 
 /**
  * Destino dos links do Supabase: login com Google, confirmação de e-mail e
@@ -29,6 +30,12 @@ export async function GET(request: Request) {
       error.code === "flow_state_not_found" || /code verifier/i.test(error.message)
         ? "Abra o link no mesmo navegador em que você pediu o cadastro ou a recuperação de senha."
         : authErrorMessage(error),
+    );
+  }
+  // Login com Google em conta que tem 2FA: pede o código antes de liberar.
+  if (await needsMfaVerification(supabase)) {
+    return NextResponse.redirect(
+      new URL(`/verificar-2fa?next=${encodeURIComponent(next)}`, url.origin),
     );
   }
   return NextResponse.redirect(new URL(next, url.origin));

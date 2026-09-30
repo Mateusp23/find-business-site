@@ -39,7 +39,9 @@ export function analyzePsi(url: string, psi: PsiResponse): SiteAnalysis {
   const finalUrl = lh.finalDisplayedUrl ?? lh.finalUrl ?? url;
 
   const checks = {
-    https: audits["is-on-https"] ? passed(audits["is-on-https"].score) : finalUrl.startsWith("https:"),
+    https: audits["is-on-https"]
+      ? passed(audits["is-on-https"].score)
+      : finalUrl.startsWith("https:"),
     mobileFriendly: passed(audits["viewport"]?.score),
     hasMetaDescription: passed(audits["meta-description"]?.score),
     hasTitle: passed(audits["document-title"]?.score),
@@ -68,7 +70,11 @@ export function analyzePsi(url: string, psi: PsiResponse): SiteAnalysis {
       pitch: "aparece como “não seguro” no navegador",
     });
   }
-  if ((scores.seo !== null && scores.seo < 80) || checks.hasMetaDescription === false || checks.hasTitle === false) {
+  if (
+    (scores.seo !== null && scores.seo < 80) ||
+    checks.hasMetaDescription === false ||
+    checks.hasTitle === false
+  ) {
     issues.push({
       label: `Pouco otimizado para o Google${scores.seo !== null ? ` (${scores.seo}/100)` : ""}`,
       pitch: "não está preparado para aparecer bem nas buscas do Google",
@@ -96,9 +102,7 @@ export function analyzePsi(url: string, psi: PsiResponse): SiteAnalysis {
   ];
   const available = weights.filter(([v]) => v !== null) as [number, number][];
   const totalWeight = available.reduce((sum, [, w]) => sum + w, 0);
-  let quality = totalWeight
-    ? available.reduce((sum, [v, w]) => sum + v * w, 0) / totalWeight
-    : 50;
+  let quality = totalWeight ? available.reduce((sum, [v, w]) => sum + v * w, 0) / totalWeight : 50;
   if (checks.mobileFriendly === false) quality -= 25;
   if (checks.https === false) quality -= 20;
   quality = Math.max(0, Math.min(100, Math.round(quality)));

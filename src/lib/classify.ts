@@ -180,9 +180,5 @@ export function scoreBusiness(input: {
 
 /** Remove acentos e caixa para comparar nomes de cidade. */
 export function normalize(text: string) {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }

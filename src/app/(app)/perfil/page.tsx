@@ -17,6 +17,8 @@ import {
   type ProfileValues,
 } from "@/lib/validation/schemas";
 import { UserAvatar } from "@/components/layout/UserAvatar";
+import { SessionsCard } from "@/components/security/SessionsCard";
+import { TwoFactorCard } from "@/components/security/TwoFactorCard";
 import { SERVICES } from "@/lib/catalog";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { authErrorMessage } from "@/lib/supabase/errors";
@@ -90,6 +92,8 @@ export default function PerfilPage() {
       )}
 
       {user?.providers.includes("email") && <ChangePasswordCard />}
+      {user && <TwoFactorCard />}
+      {user && <SessionsCard />}
 
       {user && (
         <Button variant="danger-soft" onPress={signOut}>

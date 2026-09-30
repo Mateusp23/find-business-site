@@ -6,7 +6,13 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { authErrorMessage } from "@/lib/supabase/errors";
 
 /** Entrar/cadastrar com Google (OAuth pelo Supabase). */
-export function GoogleButton({ next = "/", onError }: { next?: string; onError: (m: string) => void }) {
+export function GoogleButton({
+  next = "/",
+  onError,
+}: {
+  next?: string;
+  onError: (m: string) => void;
+}) {
   const [loading, setLoading] = useState(false);
 
   const signIn = async () => {

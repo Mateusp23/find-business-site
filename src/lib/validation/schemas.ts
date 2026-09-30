@@ -18,7 +18,31 @@ export const emailField = z
 export const newPasswordField = z
   .string()
   .min(MIN_PASSWORD, `A senha precisa ter pelo menos ${MIN_PASSWORD} caracteres.`)
-  .max(72, "A senha pode ter no máximo 72 caracteres.");
+  .max(72, "A senha pode ter no máximo 72 caracteres.")
+  .regex(/[a-zà-ÿ]/i, "Use pelo menos uma letra.")
+  .regex(/\d/, "Use pelo menos um número.")
+  .refine(
+    (v) => !COMMON_PASSWORDS.has(v.toLowerCase()),
+    "Essa senha é muito comum. Escolha outra.",
+  );
+
+/** Senhas mais usadas no Brasil (lista curta; o Supabase Pro também checa senhas vazadas). */
+const COMMON_PASSWORDS = new Set([
+  "12345678",
+  "123456789",
+  "1234567890",
+  "12345678a",
+  "senha123",
+  "senha1234",
+  "password1",
+  "qwerty123",
+  "abc12345",
+  "brasil123",
+  "mudar123",
+  "admin123",
+  "11223344a",
+  "a1234567",
+]);
 
 /** Senha nova + confirmação (use com .refine(passwordsMatch, passwordMismatch)). */
 const passwordPair = {
@@ -72,9 +96,7 @@ export const siteUrlSchema = z.object({
     .trim()
     .min(1, "Digite o endereço do site.")
     .transform((v) => (/^https?:\/\//i.test(v) ? v : `https://${v}`))
-    .pipe(
-      z.url({ protocol: /^https?$/, hostname: /\./, error: "Endereço de site inválido." }),
-    ),
+    .pipe(z.url({ protocol: /^https?$/, hostname: /\./, error: "Endereço de site inválido." })),
 });
 export type SiteUrlInput = z.input<typeof siteUrlSchema>;
 export type SiteUrlValues = z.output<typeof siteUrlSchema>;
@@ -96,3 +118,15 @@ export const noteSchema = z.object({
   text: z.string().trim().min(1, "Escreva a anotação.").max(1000, "Máximo de 1.000 caracteres."),
 });
 export type NoteValues = z.infer<typeof noteSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Verificação em duas etapas (2FA)
+// ─────────────────────────────────────────────────────────────
+export const mfaCodeSchema = z.object({
+  code: z
+    .string()
+    .transform((v) => v.replace(/\s/g, ""))
+    .pipe(z.string().regex(/^\d{6}$/, "Digite os 6 números que aparecem no app.")),
+});
+export type MfaCodeInput = z.input<typeof mfaCodeSchema>;
+export type MfaCodeValues = z.output<typeof mfaCodeSchema>;

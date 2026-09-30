@@ -19,6 +19,7 @@ import { hydrateAnalysis } from "@/store/slices/analysisSlice";
 import { hydrateSettings } from "@/store/slices/settingsSlice";
 import { setDataStatus, setUser, signedOut } from "@/store/slices/sessionSlice";
 import { importLocalData } from "@/lib/data/importLocal";
+import { needsMfaVerification } from "@/lib/supabase/mfa";
 
 function hydrate(store: AppStore, data: UserData) {
   store.dispatch(hydrateLeads(data.leads));
@@ -44,6 +45,12 @@ function useDataBootstrap(store: AppStore) {
 
     const boot = async (user: SessionUser | null) => {
       if (!user) {
+        setDataAdapter(null);
+        return;
+      }
+      if (loadedFor === user.id) return;
+      // 2FA pendente: o banco não libera os dados antes do código (RLS). Espera a verificação.
+      if (await needsMfaVerification(supabase)) {
         setDataAdapter(null);
         return;
       }
@@ -85,6 +92,8 @@ function useDataBootstrap(store: AppStore) {
         return;
       }
       const user = toSessionUser(session?.user);
+      // Código do 2FA confirmado: agora os dados podem ser carregados.
+      if (event === "MFA_CHALLENGE_VERIFIED") loadedFor = null;
       if (user) {
         store.dispatch(setUser(user));
         // Adiado: o Supabase não permite chamadas dentro deste callback.
@@ -109,9 +118,11 @@ function ThemeSync() {
 export function Providers({
   children,
   initialUser,
+  nonce,
 }: {
   children: React.ReactNode;
   initialUser: SessionUser | null;
+  nonce?: string;
 }) {
   const [store] = useState(() =>
     makeStore({
@@ -128,6 +139,7 @@ export function Providers({
         attribute={["class", "data-theme"]}
         defaultTheme="dark"
         enableSystem
+        nonce={nonce}
         disableTransitionOnChange
       >
         <ThemeSync />
