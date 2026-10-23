@@ -30,11 +30,22 @@ Siga a seção **Checklist do painel** uma vez por projeto (e de novo ao criar o
   | Busca de empresas (Google Places, custa dinheiro) | 30/hora e 150/dia | `RATE_LIMIT_SEARCH_PER_HOUR`, `RATE_LIMIT_SEARCH_PER_DAY` |
   | Análise de site (PageSpeed)                       | 60/hora           | `RATE_LIMIT_ANALYSIS_PER_HOUR`                            |
   | Lista de cidades                                  | 60/minuto         | —                                                         |
+  | Checkout, portal e sincronização do Stripe        | 20/hora           | —                                                         |
 
   Estourou → resposta 429 com `Retry-After` e toast "Tente de novo em X minutos". Sem Supabase (modo local), o limite fica em memória por IP.
 
 - **Erros padronizados:** erro inesperado vira "Erro inesperado no servidor" com um código (`ref`) que aparece no log; o detalhe técnico nunca vai para o navegador.
 - **Chaves do Google só no servidor** (`import "server-only"`), nunca com `NEXT_PUBLIC_`.
+
+### Planos e pagamentos
+
+- **Quem muda plano é só o servidor.** O usuário logado só lê a própria assinatura e o próprio uso (`subscriptions` e `usage` sem permissão de escrita). Quem grava é o webhook do Stripe, com a chave secreta do Supabase.
+- **Webhook com assinatura conferida** (`STRIPE_WEBHOOK_SECRET`): evento sem assinatura válida recebe 400 e não toca no banco. Eventos repetidos são ignorados (`billing_events`), e a assinatura é sempre relida no Stripe, então evento fora de ordem não estraga nada.
+- **Créditos gastos no banco, de forma atômica** (`consume_quota`): duas buscas ao mesmo tempo não furam o limite, e chamar a função direto só gasta o próprio saldo. **Devolver créditos** (`refund_quota`) só o servidor consegue.
+- **Limite de leads salvos por gatilho no banco:** vale mesmo para quem grava pela API do Supabase sem passar pelo app.
+- **Volta do checkout:** `/api/billing/sync` só aceita a sessão de pagamento aberta pelo próprio usuário (`client_reference_id`).
+- **Nenhum dado de cartão passa pelo app:** o pagamento acontece na página do Stripe.
+- `SUPABASE_SECRET_KEY` e `STRIPE_SECRET_KEY` só no servidor (`import "server-only"`), nunca com `NEXT_PUBLIC_`.
 
 ### Navegador (cabeçalhos HTTP)
 
@@ -49,6 +60,7 @@ Siga a seção **Checklist do painel** uma vez por projeto (e de novo ao criar o
 - **Usuários sem login (`anon`)** não têm acesso a nenhuma tabela.
 - **Perfil:** só nome, foto, serviço, tema e modelos podem ser alterados (id e datas travados).
 - **Limite de tamanho** em anotações, modelos e dados salvos (evita lotar o banco).
+- **Planos** (`0004`): `plans` é só leitura; `subscriptions`, `usage` e `billing_events` só o servidor altera.
 - Funções com `search_path` fixo e esquema `private` fora da API.
 
 ## Checklist do painel
@@ -92,6 +104,14 @@ Siga a seção **Checklist do painel** uma vez por projeto (e de novo ao criar o
 2. **Chave do PageSpeed:** separada, restrita à **PageSpeed Insights API**.
 3. **Faturamento → Orçamentos e alertas:** crie um orçamento mensal (ex.: R$ 100) com alerta em 50%, 90% e 100%.
 4. **APIs e serviços → Places API (New) → Cotas:** defina um limite diário de chamadas como teto de gasto.
+
+### Stripe
+
+1. Ative o **2FA da sua conta** do Stripe.
+2. Teste tudo no **modo de teste** antes de usar as chaves `live`.
+3. **Webhook em produção:** só os eventos listados no README. Se o _Signing secret_ vazar, use _Roll secret_.
+4. Se a `STRIPE_SECRET_KEY` vazar: **Developers → API keys → Roll key** e atualize o servidor. Opcional: use uma _restricted key_ com acesso só a Customers, Checkout Sessions, Subscriptions e Customer portal.
+5. **Settings → Radar:** deixe as regras padrão contra fraude ligadas.
 
 ### GitHub
 

@@ -1,3 +1,4 @@
+import type { BillingOverview, Plan, PlanId, SubscriptionStatus } from "@/lib/billing/plans";
 import type {
   Business,
   LeadActivityData,
@@ -6,7 +7,7 @@ import type {
   SiteAnalysis,
 } from "@/types/lead";
 
-/** Tipos das tabelas (espelham supabase/migrations/0001_init.sql). */
+/** Tipos das tabelas (espelham supabase/migrations). */
 export interface Database {
   public: {
     Tables: {
@@ -63,12 +64,69 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["site_analyses"]["Row"]>;
         Relationships: [];
       };
+      plans: {
+        Row: Plan & { is_public: boolean; created_at: string };
+        Insert: Partial<Plan>;
+        Update: Partial<Plan>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: {
+          user_id: string;
+          plan_id: PlanId;
+          status: SubscriptionStatus;
+          provider: "none" | "stripe" | "manual";
+          customer_id: string | null;
+          subscription_id: string | null;
+          price_id: string | null;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          canceled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["subscriptions"]["Row"]> & { user_id: string };
+        Update: Partial<Database["public"]["Tables"]["subscriptions"]["Row"]>;
+        Relationships: [];
+      };
+      usage: {
+        Row: { user_id: string; period: string; searches: number; analyses: number };
+        Insert: { user_id: string; period: string };
+        Update: { searches?: number; analyses?: number };
+        Relationships: [];
+      };
+      billing_events: {
+        Row: { id: string; type: string; received_at: string };
+        Insert: { id: string; type: string };
+        Update: { type?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       check_rate_limit: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number };
         Returns: { allowed: boolean; remaining: number; reset_at: string };
+      };
+      consume_quota: {
+        Args: { p_kind: QuotaKind; p_amount?: number };
+        Returns: {
+          allowed: boolean;
+          used: number;
+          limit: number | null;
+          plan: PlanId;
+          plan_name: string;
+          resets_at: string;
+        };
+      };
+      refund_quota: {
+        Args: { p_user: string; p_kind: QuotaKind; p_amount: number };
+        Returns: undefined;
+      };
+      billing_overview: {
+        Args: Record<string, never>;
+        Returns: Omit<BillingOverview, "mode" | "billingEnabled" | "plans">;
       };
     };
     Enums: Record<string, never>;
@@ -77,3 +135,5 @@ export interface Database {
 }
 
 export type ThemePreference = "system" | "light" | "dark";
+
+export type QuotaKind = "search" | "analysis";

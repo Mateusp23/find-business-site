@@ -32,6 +32,8 @@ export const RATE_LIMITS = {
     },
   ],
   cities: [{ bucket: "cities:min", limit: 60, windowSeconds: 60 }],
+  // Checkout e portal do Stripe: ninguém precisa abrir mais que isso.
+  billing: [{ bucket: "billing:hour", limit: 20, windowSeconds: 3600 }],
 } satisfies Record<string, RateRule[]>;
 
 // ─────────────────────────────────────────────────────────────

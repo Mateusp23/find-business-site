@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { PlanLimitError } from "@/lib/billing/plans";
 import type { Database } from "@/lib/supabase/types";
 import { mergeTemplates, templateOverrides } from "@/store/slices/settingsSlice";
 import type { LeadActivity, SavedLead } from "@/types/lead";
@@ -23,8 +24,17 @@ const toRow = (userId: string, l: SavedLead): LeadRow => ({
 const MIGRATION_HINT =
   "O banco está desatualizado: rode os arquivos de supabase/migrations no SQL Editor do Supabase (veja o README).";
 
-function check(error: { message: string; code?: string } | null) {
+function check(error: { message: string; code?: string; hint?: string | null } | null) {
   if (!error) return;
+  // Gatilho da migração 0004: o plano não permite mais leads salvos.
+  if (error.message === "PLAN_LIMIT_LEADS") {
+    const limit = Number(error.hint);
+    throw new PlanLimitError(
+      Number.isFinite(limit) && limit > 0
+        ? `Seu plano permite até ${limit} leads salvos. Faça upgrade para salvar mais.`
+        : "Seu plano não permite salvar mais leads. Faça upgrade para salvar mais.",
+    );
+  }
   // Coluna ou tabela que não existe = migração nova ainda não aplicada no Supabase.
   if (
     error.code === "PGRST204" ||
