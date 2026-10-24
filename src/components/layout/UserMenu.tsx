@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Tooltip } from "@heroui/react";
 import { HardDrive, LogOut } from "lucide-react";
+import { useGetBillingQuery } from "@/store/api/findBusinessApi";
 import { useAppSelector } from "@/store/hooks";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { UserAvatar } from "./UserAvatar";
@@ -13,6 +14,8 @@ export function UserMenu() {
   const router = useRouter();
   const { mode, user } = useAppSelector((s) => s.session);
   const name = useAppSelector((s) => s.settings.userName);
+  const { data: billing } = useGetBillingQuery(undefined, { skip: mode !== "supabase" || !user });
+  const planName = billing?.mode === "supabase" ? billing.plan.name : null;
 
   if (mode === "local") {
     return (
@@ -32,13 +35,25 @@ export function UserMenu() {
 
   return (
     <div className="flex items-center gap-2 rounded-xl bg-surface-secondary p-2">
-      <Link href="/perfil" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 hover:bg-default">
+      <Link
+        href="/perfil"
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 hover:bg-default"
+      >
         <UserAvatar name={name || user.name} email={user.email} src={user.avatarUrl} />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{name || user.name || "Sem nome"}</p>
           <p className="truncate text-xs text-muted">{user.email}</p>
         </div>
       </Link>
+      {planName && (
+        <Link
+          href="/plano"
+          className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-soft-foreground hover:opacity-80"
+          title="Ver plano e uso do mês"
+        >
+          {planName}
+        </Link>
+      )}
       <Tooltip delay={300}>
         <Button isIconOnly size="sm" variant="ghost" aria-label="Sair da conta" onPress={signOut}>
           <LogOut className="size-4" />

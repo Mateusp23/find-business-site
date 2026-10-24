@@ -79,7 +79,7 @@ export function SignupForm({ next }: { next: string }) {
   return (
     <AuthCard
       title="Criar conta"
-      description="Salve seus leads e acesse de qualquer computador."
+      description="Comece grátis: 15 créditos de busca por mês, sem cartão."
       footer={
         <>
           Já tem conta?{" "}

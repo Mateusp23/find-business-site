@@ -1,5 +1,15 @@
 /** Rotas que não exigem login. */
-export const PUBLIC_ROUTES = ["/login", "/cadastro", "/esqueci-senha", "/auth", "/api/health"];
+// /api/billing/webhook: o Stripe chama sem login; a rota confere a assinatura do evento.
+export const PUBLIC_ROUTES = [
+  "/login",
+  "/cadastro",
+  "/esqueci-senha",
+  "/auth",
+  "/api/health",
+  "/api/billing/webhook",
+  // Cron da Vercel (mantém o Supabase grátis acordado); protegido por CRON_SECRET.
+  "/api/cron/keepalive",
+];
 
 /** Rotas liberadas para quem entrou com senha mas ainda não digitou o código do 2FA. */
 export const MFA_PENDING_ROUTES = ["/verificar-2fa", "/auth"];

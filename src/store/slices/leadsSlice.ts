@@ -24,7 +24,8 @@ const leadsSlice = createSlice({
   reducers: {
     hydrateLeads(_state, action: PayloadAction<LeadsState>) {
       const byId = { ...action.payload.byId };
-      for (const [id, l] of Object.entries(byId)) byId[id] = { ...l, nextFollowUpOn: l.nextFollowUpOn ?? null };
+      for (const [id, l] of Object.entries(byId))
+        byId[id] = { ...l, nextFollowUpOn: l.nextFollowUpOn ?? null };
       return { byId };
     },
     saveLead(
@@ -52,6 +53,10 @@ const leadsSlice = createSlice({
       state.byId[action.payload.business.placeId] = action.payload;
     },
     removeLead(state, action: PayloadAction<string>) {
+      delete state.byId[action.payload];
+    },
+    /** Tira da tela um lead novo que o banco recusou (ex.: limite do plano). Não grava nada. */
+    leadDiscarded(state, action: PayloadAction<string>) {
       delete state.byId[action.payload];
     },
     setLeadStatus(state, action: PayloadAction<{ placeId: string; status: LeadStatus }>) {
@@ -92,6 +97,7 @@ export const {
   saveLead,
   restoreLead,
   removeLead,
+  leadDiscarded,
   setLeadStatus,
   setLeadNotes,
   markContacted,

@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Gauge, MessageSquareText, Settings, Star, UserRound } from "lucide-react";
+import {
+  Compass,
+  CreditCard,
+  Gauge,
+  MessageSquareText,
+  Settings,
+  Star,
+  UserRound,
+} from "lucide-react";
 import { followUpState, isDue } from "@/lib/followUp";
 import { useAppSelector } from "@/store/hooks";
 import { BrandLogo } from "./BrandLogo";
@@ -15,6 +23,7 @@ const NAV = [
   { href: "/analisar", label: "Analisar site", icon: Gauge },
   { href: "/mensagens", label: "Mensagens", icon: MessageSquareText },
   { href: "/perfil", label: "Perfil", icon: UserRound },
+  { href: "/plano", label: "Plano", icon: CreditCard },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ] as const;
 

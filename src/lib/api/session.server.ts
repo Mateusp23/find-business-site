@@ -7,6 +7,7 @@ export interface ApiSession {
   /** Cliente do Supabase com a sessão do usuário (null no modo local). */
   supabase: Awaited<ReturnType<typeof getSupabaseServer>>;
   userId: string | null;
+  email: string | null;
 }
 
 /**
@@ -16,7 +17,7 @@ export interface ApiSession {
  */
 export async function requireSession(): Promise<ApiSession> {
   const supabase = await getSupabaseServer();
-  if (!supabase) return { supabase: null, userId: null };
+  if (!supabase) return { supabase: null, userId: null, email: null };
 
   const { data } = await supabase.auth.getClaims().catch(() => ({ data: null }));
   const claims = data?.claims;
@@ -28,5 +29,5 @@ export async function requireSession(): Promise<ApiSession> {
       throw new ApiError("Confirme o código de verificação em duas etapas.", 401, "MFA_REQUIRED");
     }
   }
-  return { supabase, userId: claims.sub };
+  return { supabase, userId: claims.sub, email: (claims.email as string | undefined) ?? null };
 }

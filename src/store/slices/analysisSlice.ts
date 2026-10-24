@@ -22,13 +22,18 @@ export const runAnalysis = createAsyncThunk<
   SiteAnalysis,
   /** silent: não mostra toast (usado na análise em lote, que mostra um resumo). */
   { id: string; url: string; silent?: boolean },
-  { rejectValue: string }
+  /** code vem da API (ex.: PLAN_LIMIT quando acabam as análises do plano). */
+  { rejectValue: { message: string; code?: string } }
 >("analysis/run", async ({ url }, { dispatch, rejectWithValue }) => {
   const request = dispatch(findBusinessApi.endpoints.analyzeSite.initiate(url));
   try {
     return await request.unwrap();
   } catch (err) {
-    return rejectWithValue(apiErrorMessage(err as Parameters<typeof apiErrorMessage>[0]));
+    const code = (err as { data?: { code?: unknown } })?.data?.code;
+    return rejectWithValue({
+      message: apiErrorMessage(err as Parameters<typeof apiErrorMessage>[0]),
+      code: typeof code === "string" ? code : undefined,
+    });
   } finally {
     request.unsubscribe();
   }
@@ -54,9 +59,14 @@ const analysisSlice = createSlice({
         state.byId[action.meta.arg.id] = { status: "done", data: action.payload };
       })
       .addCase(runAnalysis.rejected, (state, action) => {
+        // Limite do plano não é defeito do site: volta ao estado "não analisado".
+        if (action.payload?.code === "PLAN_LIMIT") {
+          delete state.byId[action.meta.arg.id];
+          return;
+        }
         state.byId[action.meta.arg.id] = {
           status: "error",
-          error: action.payload ?? action.error.message ?? "Erro na análise",
+          error: action.payload?.message ?? action.error.message ?? "Erro na análise",
         };
       });
   },

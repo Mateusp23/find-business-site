@@ -19,8 +19,9 @@ import activitiesReducer, {
 } from "./slices/activitiesSlice";
 import { formatDateISO } from "@/lib/followUp";
 import { getDataAdapter } from "@/lib/data";
+import { isPlanLimitError } from "@/lib/billing/plans";
 import { notify } from "@/lib/notify";
-import { feedback } from "./feedback";
+import { feedback, notifyPlanLimit } from "./feedback";
 
 const appReducer = combineReducers({
   session: sessionReducer,
@@ -135,8 +136,17 @@ persistence.startListening({
         .then(() => {
           const t = successToast();
           if (t) notify.success(t[0], { description: t[1] });
+          if (!before) api.dispatch(findBusinessApi.util.invalidateTags(["Billing"]));
         })
-        .catch(reportSaveError);
+        .catch((err) => {
+          // Lead novo recusado pelo limite do plano: some da lista (não ficou salvo).
+          if (isPlanLimitError(err)) {
+            if (!before) api.dispatch(leads.leadDiscarded(placeId));
+            notifyPlanLimit("Limite de leads do plano", err.message);
+            return;
+          }
+          reportSaveError(err);
+        });
     };
 
     if (leads.setLeadNotes.match(action)) {
@@ -156,6 +166,7 @@ persistence.startListening({
     if (!adapter) return;
     enqueue(action.payload, () => adapter.deleteLead(action.payload))
       .then(() => {
+        api.dispatch(findBusinessApi.util.invalidateTags(["Billing"]));
         if (!removed) return;
         notify.info("Lead removido", {
           description: removed.business.name,
@@ -192,8 +203,17 @@ persistence.startListening({
   effect: ({ payload: a }, api) => {
     const adapter = getDataAdapter();
     if (!adapter) return;
-    enqueue(a.placeId, () => adapter.addActivity(a))
-      .then(() => {
+    enqueue(a.placeId, async () => {
+      // O lead pode ter sido recusado (limite do plano) antes desta atividade gravar.
+      if (!(api.getState() as RootState).leads.byId[a.placeId]) return false;
+      await adapter.addActivity(a);
+      return true;
+    })
+      .then((saved) => {
+        if (!saved) {
+          api.dispatch(activityRemoved({ placeId: a.placeId, id: a.id }));
+          return;
+        }
         if (a.type === "note") notify.success("Anotação adicionada ao histórico");
       })
       .catch((err) => {
