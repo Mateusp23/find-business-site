@@ -24,7 +24,10 @@ export async function requireSession(): Promise<ApiSession> {
   if (!claims?.sub) throw new ApiError("Sua sessão expirou. Entre novamente.", 401, "UNAUTHORIZED");
 
   if (claims.aal !== "aal2") {
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const { data: aal, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !aal?.currentLevel || !aal.nextLevel) {
+      throw new ApiError("Não foi possível verificar a segurança da sessão. Tente novamente.", 503, "AUTH_UNAVAILABLE");
+    }
     if (aal?.nextLevel === "aal2") {
       throw new ApiError("Confirme o código de verificação em duas etapas.", 401, "MFA_REQUIRED");
     }

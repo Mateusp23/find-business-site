@@ -10,13 +10,16 @@ import type { Database } from "@/lib/supabase/types";
  * Faz uma consulta leve de verdade no banco: a tabela pública de planos.
  *
  * Proteção: a Vercel manda "Authorization: Bearer <CRON_SECRET>". Com CRON_SECRET
- * definido, qualquer outra chamada recebe 401.
+ * ausente, a rota fica indisponível; credenciais inválidas recebem 401.
  */
 export const dynamic = "force-dynamic";
 
 export const GET = withApiErrors(async (request: Request) => {
   const secret = process.env.CRON_SECRET;
-  if (secret && request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret?.trim()) {
+    return jsonError(503, "Serviço indisponível.", "CRON_UNAVAILABLE");
+  }
+  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
     return jsonError(401, "Não autorizado.", "UNAUTHORIZED");
   }
   if (!isSupabaseConfigured) return NextResponse.json({ ok: true, skipped: "modo local" });

@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@heroui/react";
 import { ShieldCheck } from "lucide-react";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { FormTextField, SubmitButton } from "@/components/form";
+import { FormOtpField, SubmitButton } from "@/components/form";
 import { SelectField } from "@/components/ui/fields";
 import { notify } from "@/lib/notify";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
@@ -81,15 +81,11 @@ export function VerifyMfaForm({ next }: { next: string }) {
             onChange={setFactorId}
           />
         )}
-        <FormTextField
+        <FormOtpField
           control={control}
           name="code"
           label="Código"
-          placeholder="123 456"
-          inputMode="numeric"
-          autoComplete="one-time-code"
           autoFocus
-          isRequired
         />
         <SubmitButton
           isSubmitting={formState.isSubmitting}

@@ -81,7 +81,13 @@ export async function proxy(request: NextRequest) {
 
   // 2FA: entrou só com a senha (aal1), mas a conta tem fator verificado → pede o código.
   if (claims?.aal !== "aal2") {
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const { data: aal, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !aal?.currentLevel || !aal.nextLevel) {
+      return NextResponse.json(
+        { error: "Não foi possível verificar a segurança da sessão. Tente novamente.", code: "AUTH_UNAVAILABLE" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
     if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
       if (matches(pathname, MFA_PENDING_ROUTES) || matches(pathname, PUBLIC_ROUTES)) {
         return matches(pathname, GUEST_ONLY_ROUTES) ? redirect("/verificar-2fa", false) : response;

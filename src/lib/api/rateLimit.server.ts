@@ -90,16 +90,19 @@ export async function enforceRateLimit(
         p_window_seconds: rule.windowSeconds,
       });
       if (error) {
-        // Migração 0003 ainda não aplicada: não derruba o app, mas avisa no log.
+        // Nunca execute uma operação sem conseguir conferir seu limite.
         if (error.code === "PGRST202" || error.code === "42883") {
           console.warn(
             "[rate-limit] função check_rate_limit não existe: rode supabase/migrations/0003",
           );
-          continue;
+          throw new ApiError("Controle de uso indisponível. Tente novamente mais tarde.", 503, "RATE_LIMIT_UNAVAILABLE");
         }
         throw error;
       }
-      if (data && !data.allowed) tooMany(new Date(data.reset_at));
+      if (!data || typeof data.allowed !== "boolean" || !Number.isFinite(Date.parse(data.reset_at))) {
+        throw new ApiError("Controle de uso indisponível. Tente novamente mais tarde.", 503, "RATE_LIMIT_UNAVAILABLE");
+      }
+      if (!data.allowed) tooMany(new Date(data.reset_at));
     } else {
       const r = checkMemory(`${clientIp(request)}:${rule.bucket}`, rule);
       if (!r.allowed) tooMany(r.resetAt);

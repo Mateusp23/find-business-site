@@ -18,6 +18,7 @@ Siga a seção **Checklist do painel** uma vez por projeto (e de novo ao criar o
 
 - Renova a sessão a cada requisição e manda para `/login` quem não está logado (`/api` responde 401).
 - Conta com 2FA e sessão só com senha (`aal1`) → vai para `/verificar-2fa` (`/api` responde 401 `MFA_REQUIRED`).
+- Falha ao conferir o nível de autenticação → bloqueia com 503, tanto no proxy quanto dentro da API.
 
 ### Rotas `/api` (back-end)
 
@@ -35,6 +36,8 @@ Siga a seção **Checklist do painel** uma vez por projeto (e de novo ao criar o
   Estourou → resposta 429 com `Retry-After` e toast "Tente de novo em X minutos". Sem Supabase (modo local), o limite fica em memória por IP.
 
 - **Erros padronizados:** erro inesperado vira "Erro inesperado no servidor" com um código (`ref`) que aparece no log; o detalhe técnico nunca vai para o navegador.
+- **Limites obrigatórios:** função de rate limit ausente ou resposta inválida do banco bloqueia a operação. Aplique a migração `0003` antes de usar essas rotas.
+- **Cron keepalive:** exige `CRON_SECRET`; sem segredo configurado retorna 503 e com credencial inválida retorna 401.
 - **Chaves do Google só no servidor** (`import "server-only"`), nunca com `NEXT_PUBLIC_`.
 
 ### Planos e pagamentos
