@@ -44,4 +44,8 @@ next-env.d.ts
 # arquivo de entrega (pode apagar)
 .tmp/
 
+# Capturas e logs de verificação visual
+/.playwright-mcp/
+/.impeccable/review/
+
 SECURITY.md

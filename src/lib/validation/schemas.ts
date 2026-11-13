@@ -130,3 +130,23 @@ export const mfaCodeSchema = z.object({
 });
 export type MfaCodeInput = z.input<typeof mfaCodeSchema>;
 export type MfaCodeValues = z.output<typeof mfaCodeSchema>;
+
+/** Valores em reais na interface; o domínio e o banco guardam centavos inteiros. */
+const saleMoney = z.string().trim()
+  .regex(/^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?$/, "Use um valor em reais, como 1.500,00.")
+  .transform((v) => Math.round(Number(v.replace(/\./g, "").replace(",", ".")) * 100))
+  .pipe(z.number().int().min(0).max(100_000_000_00, "O valor máximo é R$ 100 milhões."));
+const saleDate = z.iso.date("Informe uma data válida.").min(10).refine((v) => v >= "2000-01-01", "Use uma data a partir de 2000.");
+export const saleSchema = z.object({
+  amountCents: saleMoney,
+  monthlyCents: saleMoney,
+  closedOn: saleDate.refine((v) => {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return v <= today;
+  }, "A data de fechamento não pode ser futura."),
+  recurringEndOn: z.union([saleDate, z.literal("")]).transform((v) => v || null),
+}).refine((v) => v.amountCents > 0 || v.monthlyCents > 0, { message: "Informe o valor da venda ou a mensalidade.", path: ["amountCents"] })
+  .refine((v) => !v.recurringEndOn || v.recurringEndOn >= v.closedOn, { message: "O fim da recorrência deve ser igual ou posterior ao fechamento.", path: ["recurringEndOn"] });
+export type SaleInput = z.input<typeof saleSchema>;
+export type SaleValues = z.output<typeof saleSchema>;

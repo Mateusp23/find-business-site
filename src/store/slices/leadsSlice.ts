@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { AUTO_FOLLOW_UP_DAYS, addDaysISO, todayISO } from "@/lib/followUp";
-import type { Business, LeadStatus, SavedLead } from "@/types/lead";
+import type { Business, LeadSale, LeadStatus, SavedLead } from "@/types/lead";
 
 export interface LeadsState {
   /** Indexado por placeId. */
@@ -25,7 +25,7 @@ const leadsSlice = createSlice({
     hydrateLeads(_state, action: PayloadAction<LeadsState>) {
       const byId = { ...action.payload.byId };
       for (const [id, l] of Object.entries(byId))
-        byId[id] = { ...l, nextFollowUpOn: l.nextFollowUpOn ?? null };
+        byId[id] = { ...l, nextFollowUpOn: l.nextFollowUpOn ?? null, sale: l.sale ?? null };
       return { byId };
     },
     saveLead(
@@ -46,6 +46,7 @@ const leadsSlice = createSlice({
             savedAt: new Date().toISOString(),
             lastContactAt: null,
             nextFollowUpOn: null,
+            sale: null,
           };
     },
     /** Volta um lead removido exatamente como estava (botão "Desfazer" do toast). */
@@ -66,6 +67,15 @@ const leadsSlice = createSlice({
     setLeadNotes(state, action: PayloadAction<{ placeId: string; notes: string }>) {
       const lead = state.byId[action.payload.placeId];
       if (lead) lead.notes = action.payload.notes;
+    },
+    setLeadSale(state, action: PayloadAction<{ placeId: string; sale: LeadSale | null }>) {
+      const lead = state.byId[action.payload.placeId];
+      if (!lead) return;
+      lead.sale = action.payload.sale;
+      if (action.payload.sale) {
+        lead.status = "fechado";
+        lead.nextFollowUpOn = null;
+      }
     },
     /**
      * Chamado ao abrir o WhatsApp: registra o contato, avança "novo" → "contatado" e,
@@ -100,6 +110,7 @@ export const {
   leadDiscarded,
   setLeadStatus,
   setLeadNotes,
+  setLeadSale,
   markContacted,
   setFollowUp,
 } = leadsSlice.actions;

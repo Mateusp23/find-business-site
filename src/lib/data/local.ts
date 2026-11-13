@@ -30,7 +30,10 @@ export const localAdapter: DataAdapter = {
   async load() {
     const leads = readLeads();
     // Leads salvos antes da página de detalhes não tinham "próximo contato".
-    for (const l of Object.values(leads.byId)) l.nextFollowUpOn ??= null;
+    for (const l of Object.values(leads.byId)) {
+      l.nextFollowUpOn ??= null;
+      l.sale ??= null;
+    }
     const settings = loadFromStorage<Partial<SettingsState>>(STORAGE_KEYS.settings) ?? {};
     return {
       leads,
@@ -41,7 +44,7 @@ export const localAdapter: DataAdapter = {
   async saveLead(lead) {
     const s = readLeads();
     s.byId[lead.business.placeId] = lead;
-    saveToStorage(STORAGE_KEYS.leads, s);
+    saveToStorage(STORAGE_KEYS.leads, s, true);
   },
   async saveLeads(leads) {
     const s = readLeads();

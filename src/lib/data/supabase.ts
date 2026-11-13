@@ -19,6 +19,10 @@ const toRow = (userId: string, l: SavedLead): LeadRow => ({
   saved_at: l.savedAt,
   last_contact_at: l.lastContactAt,
   next_follow_up_on: l.nextFollowUpOn,
+  sale_amount_cents: l.sale?.amountCents ?? 0,
+  sale_monthly_cents: l.sale?.monthlyCents ?? 0,
+  sale_closed_on: l.sale?.closedOn ?? null,
+  sale_recurring_end_on: l.sale?.recurringEndOn ?? null,
 });
 
 const MIGRATION_HINT =
@@ -81,6 +85,12 @@ export function supabaseAdapter(supabase: SupabaseClient<Database>, userId: stri
                 savedAt: r.saved_at,
                 lastContactAt: r.last_contact_at,
                 nextFollowUpOn: r.next_follow_up_on ?? null,
+                sale: r.sale_closed_on ? {
+                  amountCents: r.sale_amount_cents,
+                  monthlyCents: r.sale_monthly_cents,
+                  closedOn: r.sale_closed_on,
+                  recurringEndOn: r.sale_recurring_end_on,
+                } : null,
               } satisfies SavedLead,
             ]),
           ),

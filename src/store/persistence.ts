@@ -14,10 +14,11 @@ export function loadFromStorage<T>(key: string): T | null {
   }
 }
 
-export function saveToStorage(key: string, value: unknown) {
+export function saveToStorage(key: string, value: unknown, throwOnError = false) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
+  } catch (error) {
+    if (throwOnError) throw error;
     // modo privado / cota cheia: segue sem persistir
   }
 }

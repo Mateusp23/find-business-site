@@ -39,6 +39,10 @@ export interface Database {
           saved_at: string;
           last_contact_at: string | null;
           next_follow_up_on: string | null;
+          sale_amount_cents: number;
+          sale_monthly_cents: number;
+          sale_closed_on: string | null;
+          sale_recurring_end_on: string | null;
           updated_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["leads"]["Row"], "updated_at">;

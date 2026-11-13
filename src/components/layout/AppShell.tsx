@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Compass,
+  LayoutDashboard,
   CreditCard,
   Gauge,
   MessageSquareText,
@@ -18,6 +19,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
 const NAV = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/", label: "Buscar empresas", icon: Compass },
   { href: "/leads", label: "Leads salvos", icon: Star },
   { href: "/analisar", label: "Analisar site", icon: Gauge },

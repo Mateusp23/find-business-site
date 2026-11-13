@@ -1,3 +1,5 @@
+"use client";
+
 import { Card } from "@heroui/react";
 import { BrandLogo } from "@/components/layout/BrandLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";

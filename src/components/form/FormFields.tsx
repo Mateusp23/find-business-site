@@ -16,8 +16,8 @@ import { ComboField, SelectField, type Option } from "@/components/ui/fields";
  * Uso: <FormTextField control={form.control} name="email" label="E-mail" />
  * A validação vem do schema Zod passado ao useForm (zodResolver).
  */
-interface BaseProps<T extends FieldValues> {
-  control: Control<T>;
+interface BaseProps<T extends FieldValues, TOutput extends FieldValues = T> {
+  control: Control<T, unknown, TOutput>;
   name: FieldPath<T>;
   label: string;
   description?: string;
@@ -26,8 +26,8 @@ interface BaseProps<T extends FieldValues> {
   className?: string;
 }
 
-interface TextProps<T extends FieldValues> extends BaseProps<T> {
-  type?: "text" | "email" | "url" | "search" | "tel";
+interface TextProps<T extends FieldValues, TOutput extends FieldValues = T> extends BaseProps<T, TOutput> {
+  type?: "text" | "email" | "url" | "search" | "tel" | "date";
   placeholder?: string;
   autoComplete?: string;
   autoFocus?: boolean;
@@ -35,7 +35,7 @@ interface TextProps<T extends FieldValues> extends BaseProps<T> {
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }
 
-export function FormTextField<T extends FieldValues>({
+export function FormTextField<T extends FieldValues, TOutput extends FieldValues = T>({
   control,
   name,
   label,
@@ -49,7 +49,7 @@ export function FormTextField<T extends FieldValues>({
   isDisabled,
   inputMode,
   className,
-}: TextProps<T>) {
+}: TextProps<T, TOutput>) {
   const {
     field: { name: fieldName, value, onChange, onBlur, ref },
     fieldState,

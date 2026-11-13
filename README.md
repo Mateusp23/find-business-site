@@ -239,3 +239,15 @@ O `.mcp.json` já registra o servidor `heroui-react`, e o Claude Code / Cursor c
 ```bash
 claude mcp add heroui-react -- npx -y @heroui/react-mcp@latest
 ```
+
+## Dashboard e controle de vendas
+
+Acesse **Dashboard** no menu (`/dashboard`). Ao fechar um lead, informe o valor pontual da venda, a mensalidade e a data de fechamento. Também é possível editar a venda no detalhe do lead ou na lista da dashboard e definir o último dia da recorrência.
+
+**Supabase:** aplique `supabase/migrations/0005_lead_sales.sql` no SQL Editor antes de salvar vendas. As novas colunas herdam as políticas de dono e MFA da tabela `leads`. Leads antigos fechados ficam sem valor até que você complete o registro; nenhuma receita é inventada para eles.
+
+O faturamento é **estimado**, sem conciliação de pagamentos: valor pontual no fechamento + primeira mensalidade na mesma data + próximas mensalidades no aniversário do contrato (último dia do mês quando necessário). O fim da recorrência é inclusivo. A receita recorrente mensal considera os contratos ativos na data final do filtro. A lista mostra as vendas fechadas dentro do intervalo. Alterar a etapa não apaga uma venda; remover seu registro ou excluir o lead retira os valores dos indicadores.
+
+Leads abordados são contados pela data do último contato registrado. Abrir o WhatsApp registra contato, sem confirmar entrega. Conversão é a proporção dos leads captados no intervalo que atualmente estão em Fechado.
+
+Verificação dos cálculos e validação: `node --test tests/*.test.mjs`.

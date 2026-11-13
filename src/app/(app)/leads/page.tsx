@@ -9,6 +9,7 @@ import { MessageModal, type LeadContext } from "@/components/modals/MessageModal
 import { SitePromptModal } from "@/components/modals/SitePromptModal";
 import { SelectField } from "@/components/ui/fields";
 import { FollowUpBadge } from "@/components/leads/FollowUpBadge";
+import { SaleModal } from "@/components/leads/SaleModal";
 import { followUpState, isDue } from "@/lib/followUp";
 import { applyAnalysis } from "@/lib/effective";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -26,6 +27,7 @@ export default function LeadsPage() {
   const [status, setStatus] = useState<StatusFilter>("todos");
   const [messageLead, setMessageLead] = useState<LeadContext | null>(null);
   const [promptLead, setPromptLead] = useState<LeadContext | null>(null);
+  const [saleLeadId, setSaleLeadId] = useState<string | null>(null);
 
   const leads = useMemo(
     () =>
@@ -138,7 +140,10 @@ export default function LeadsPage() {
                 }
                 onMessage={() => setMessageLead(ctx(l))}
                 onPrompt={() => setPromptLead(ctx(l))}
-                onToggleSave={() => dispatch(removeLead(l.business.placeId))}
+                onToggleSave={() => {
+                  if (l.sale && !window.confirm("Remover este lead e sua venda? Os valores também sairão da dashboard.")) return;
+                  dispatch(removeLead(l.business.placeId));
+                }}
                 href={`/leads/${encodeURIComponent(l.business.placeId)}`}
                 badges={<FollowUpBadge on={l.nextFollowUpOn} status={l.status} />}
                 footer={
@@ -148,11 +153,10 @@ export default function LeadsPage() {
                       label="Etapa"
                       value={l.status}
                       options={STATUS_OPTIONS}
-                      onChange={(v) =>
-                        dispatch(
-                          setLeadStatus({ placeId: l.business.placeId, status: v as LeadStatus }),
-                        )
-                      }
+                      onChange={(v) => {
+                        if (v === "fechado" && !l.sale) setSaleLeadId(l.business.placeId);
+                        else dispatch(setLeadStatus({ placeId: l.business.placeId, status: v as LeadStatus }));
+                      }}
                     />
                     <Link
                       href={`/leads/${encodeURIComponent(l.business.placeId)}`}
@@ -171,6 +175,7 @@ export default function LeadsPage() {
 
       <MessageModal lead={messageLead} onClose={() => setMessageLead(null)} />
       <SitePromptModal lead={promptLead} onClose={() => setPromptLead(null)} />
+      <SaleModal lead={saleLeadId ? byId[saleLeadId] ?? null : null} onClose={() => setSaleLeadId(null)} />
     </div>
   );
 }
