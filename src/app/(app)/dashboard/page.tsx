@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { Button, Card, Chip, Input, Label, Skeleton, TextField, buttonVariants } from "@heroui/react";
+import { Button, Card, Chip, Input, Skeleton, TextField, buttonVariants } from "@heroui/react";
 import { ArrowRight, CalendarClock, Search, TrendingUp } from "lucide-react";
 import { SelectField } from "@/components/ui/fields";
+import { DateFilterField } from "@/components/dashboard/DateFilterField";
 import { SaleModal } from "@/components/leads/SaleModal";
 import { dateLabel, isCivilDate, localDay, money, recurringActive, salesDashboard, timestampDay } from "@/lib/sales";
 import { followUpState, isDue } from "@/lib/followUp";
@@ -62,8 +63,8 @@ export default function DashboardPage() {
       <section aria-label="Filtro de período" className="flex flex-wrap items-end gap-3">
         <SelectField className="w-full sm:w-52" label="Período" value={period} onChange={setPeriod} options={PERIODS} />
         {period === "custom" && <>
-          <TextField value={customStart} onChange={setCustomStart} className="min-w-0 flex-1 sm:max-w-48"><Label>De</Label><Input type="date" min="2000-01-01" max={customEnd || today} /></TextField>
-          <TextField value={customEnd} onChange={setCustomEnd} className="min-w-0 flex-1 sm:max-w-48"><Label>Até</Label><Input type="date" min={customStart || "2000-01-01"} max={today} /></TextField>
+          <DateFilterField label="De" value={customStart} onChange={setCustomStart} min="2000-01-01" max={customEnd || today} />
+          <DateFilterField label="Até" value={customEnd} onChange={setCustomEnd} min={customStart || "2000-01-01"} max={today} />
         </>}
         {validRange && <p className="pb-2 text-sm text-muted" aria-live="polite">{dateLabel(start)} a {dateLabel(end)}</p>}
       </section>
