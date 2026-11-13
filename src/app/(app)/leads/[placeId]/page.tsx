@@ -17,6 +17,7 @@ import {
   Sparkles,
   Star,
   Trash2,
+  Banknote,
 } from "lucide-react";
 import { SiteAnalysisPanel } from "@/components/analysis/SiteAnalysisPanel";
 import { ActivityTimeline, AddNoteForm } from "@/components/leads/ActivityTimeline";
@@ -25,6 +26,8 @@ import { FollowUpPicker } from "@/components/leads/FollowUpPicker";
 import { MessageModal, type LeadContext } from "@/components/modals/MessageModal";
 import { SitePromptModal } from "@/components/modals/SitePromptModal";
 import { SelectField } from "@/components/ui/fields";
+import { SaleModal } from "@/components/leads/SaleModal";
+import { dateLabel, money } from "@/lib/sales";
 import { PRESENCE_LABEL } from "@/lib/classify";
 import { applyAnalysis, canAnalyze } from "@/lib/effective";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -55,6 +58,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ placeId: 
 
   const [messageOpen, setMessageOpen] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
+  const [saleOpen, setSaleOpen] = useState(false);
 
   // Histórico carrega quando os dados do usuário estão prontos (e de novo ao trocar de lead).
   useEffect(() => {
@@ -100,6 +104,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ placeId: 
   )}`;
 
   const remove = () => {
+    if (lead.sale && !window.confirm("Remover este lead e sua venda? Os valores também sairão da dashboard.")) return;
     dispatch(removeLead(placeId));
     router.push("/leads");
   };
@@ -148,6 +153,10 @@ export default function LeadDetailPage({ params }: { params: Promise<{ placeId: 
 
         {/* Ações */}
         <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onPress={() => setSaleOpen(true)}>
+            <Banknote className="size-4" />
+            {lead.sale ? "Editar venda" : "Fechar venda"}
+          </Button>
           <Button onPress={() => setMessageOpen(true)}>
             <MessageCircle className="size-4" />
             Mensagem no WhatsApp
@@ -280,7 +289,10 @@ export default function LeadDetailPage({ params }: { params: Promise<{ placeId: 
                 label="Etapa do funil"
                 value={lead.status}
                 options={STATUS_OPTIONS}
-                onChange={(v) => dispatch(setLeadStatus({ placeId, status: v as LeadStatus }))}
+                onChange={(v) => {
+                  if (v === "fechado" && !lead.sale) setSaleOpen(true);
+                  else dispatch(setLeadStatus({ placeId, status: v as LeadStatus }));
+                }}
               />
               <dl className="space-y-1 text-xs text-muted">
                 <div>Salvo em {dateFmt.format(new Date(lead.savedAt))}</div>
@@ -291,6 +303,25 @@ export default function LeadDetailPage({ params }: { params: Promise<{ placeId: 
                   Busca: {lead.niche} em {lead.city}
                 </div>
               </dl>
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Header>
+              <Card.Title>Venda</Card.Title>
+              <Card.Description>Valores contratados para este lead.</Card.Description>
+            </Card.Header>
+            <Card.Content>
+              {lead.sale ? (
+                <dl className="space-y-3 text-sm">
+                  <div className="flex justify-between gap-3"><dt className="text-muted">Valor pontual</dt><dd className="font-medium tabular-nums">{money(lead.sale.amountCents)}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-muted">Mensalidade</dt><dd className="font-medium tabular-nums">{money(lead.sale.monthlyCents)}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-muted">Fechamento</dt><dd>{dateLabel(lead.sale.closedOn)}</dd></div>
+                  {lead.sale.recurringEndOn && <div className="flex justify-between gap-3"><dt className="text-muted">Fim da recorrência</dt><dd>{dateLabel(lead.sale.recurringEndOn)}</dd></div>}
+                </dl>
+              ) : <p className="text-sm text-muted">Informe o valor pontual e a mensalidade ao fechar a venda.</p>}
+              <Button variant="tertiary" onPress={() => setSaleOpen(true)}>{lead.sale ? "Editar valores" : "Registrar venda"}</Button>
+              {lead.sale && lead.status !== "fechado" && <p className="text-xs text-muted">A venda continua na dashboard mesmo em outra etapa. Para corrigir o registro, edite a venda.</p>}
             </Card.Content>
           </Card>
 
@@ -337,6 +368,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ placeId: 
 
       <MessageModal lead={messageOpen ? ctx : null} onClose={() => setMessageOpen(false)} />
       <SitePromptModal lead={promptOpen ? ctx : null} onClose={() => setPromptOpen(false)} />
+      <SaleModal lead={saleOpen ? lead : null} onClose={() => setSaleOpen(false)} />
     </div>
   );
 }

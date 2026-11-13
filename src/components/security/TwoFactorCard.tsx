@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Card, Chip, Skeleton } from "@heroui/react";
 import { Copy, KeyRound, ShieldCheck, ShieldOff, Smartphone } from "lucide-react";
-import { FormTextField, SubmitButton } from "@/components/form";
+import { FormOtpField, SubmitButton } from "@/components/form";
 import { notify } from "@/lib/notify";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { mfaErrorMessage } from "@/lib/supabase/mfa";
@@ -266,19 +266,14 @@ function EnrollStep({
       <form
         onSubmit={onSubmit}
         noValidate
-        className="flex flex-col gap-3 sm:flex-row sm:items-start"
+        className="flex flex-col gap-3"
       >
-        <FormTextField
+        <FormOtpField
           control={control}
           name="code"
           label="Código do app"
-          placeholder="123 456"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          className="flex-1"
-          isRequired
         />
-        <div className="flex gap-2 sm:mt-7">
+        <div className="flex flex-wrap gap-2">
           <SubmitButton isSubmitting={formState.isSubmitting} fullWidth={false}>
             Confirmar e ativar
           </SubmitButton>

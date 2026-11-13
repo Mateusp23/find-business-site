@@ -2,6 +2,7 @@ import {
   combineReducers,
   configureStore,
   createListenerMiddleware,
+  createAsyncThunk,
   isAnyOf,
   type Reducer,
   type UnknownAction,
@@ -19,8 +20,10 @@ import activitiesReducer, {
 } from "./slices/activitiesSlice";
 import { formatDateISO } from "@/lib/followUp";
 import { getDataAdapter } from "@/lib/data";
+import { isPlanLimitError } from "@/lib/billing/plans";
 import { notify } from "@/lib/notify";
-import { feedback } from "./feedback";
+import { feedback, notifyPlanLimit } from "./feedback";
+import type { LeadSale } from "@/types/lead";
 
 const appReducer = combineReducers({
   session: sessionReducer,
@@ -78,6 +81,27 @@ function enqueue<T>(placeId: string, task: () => Promise<T>): Promise<T> {
   return next;
 }
 
+/** Valores financeiros só entram no Redux depois da confirmação do adaptador. */
+export const saveSale = createAsyncThunk(
+  "leads/saveSale",
+  async ({ placeId, sale }: { placeId: string; sale: LeadSale | null }, api) => {
+    try {
+      const adapter = getDataAdapter();
+      if (!adapter) throw new Error("Aguarde o carregamento dos seus dados.");
+      await enqueue(placeId, async () => {
+        const lead = (api.getState() as RootState).leads.byId[placeId];
+        if (!lead) throw new Error("Lead não encontrado.");
+        await adapter.saveLead({ ...lead, sale, ...(sale ? { status: "fechado" as const, nextFollowUpOn: null } : {}) });
+        api.dispatch(leads.setLeadSale({ placeId, sale }));
+      });
+      notify.success(sale ? "Venda salva" : "Registro de venda removido");
+    } catch (err) {
+      reportSaveError(err);
+      throw err;
+    }
+  },
+);
+
 /** Anotações esperam a pessoa parar de digitar antes de salvar. */
 const noteTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -131,12 +155,26 @@ persistence.startListening({
     const save = () => {
       const lead = (api.getState() as RootState).leads.byId[placeId];
       if (!lead) return;
-      enqueue(placeId, () => adapter.saveLead(lead))
+      enqueue(placeId, async () => {
+        // Leia depois das gravações anteriores: uma venda pode ter sido confirmada
+        // enquanto esta alteração aguardava na fila (ex.: notas ou mudança de etapa).
+        const current = (api.getState() as RootState).leads.byId[placeId];
+        if (current) await adapter.saveLead(current);
+      })
         .then(() => {
           const t = successToast();
           if (t) notify.success(t[0], { description: t[1] });
+          if (!before) api.dispatch(findBusinessApi.util.invalidateTags(["Billing"]));
         })
-        .catch(reportSaveError);
+        .catch((err) => {
+          // Lead novo recusado pelo limite do plano: some da lista (não ficou salvo).
+          if (isPlanLimitError(err)) {
+            if (!before) api.dispatch(leads.leadDiscarded(placeId));
+            notifyPlanLimit("Limite de leads do plano", err.message);
+            return;
+          }
+          reportSaveError(err);
+        });
     };
 
     if (leads.setLeadNotes.match(action)) {
@@ -156,6 +194,7 @@ persistence.startListening({
     if (!adapter) return;
     enqueue(action.payload, () => adapter.deleteLead(action.payload))
       .then(() => {
+        api.dispatch(findBusinessApi.util.invalidateTags(["Billing"]));
         if (!removed) return;
         notify.info("Lead removido", {
           description: removed.business.name,
@@ -192,8 +231,17 @@ persistence.startListening({
   effect: ({ payload: a }, api) => {
     const adapter = getDataAdapter();
     if (!adapter) return;
-    enqueue(a.placeId, () => adapter.addActivity(a))
-      .then(() => {
+    enqueue(a.placeId, async () => {
+      // O lead pode ter sido recusado (limite do plano) antes desta atividade gravar.
+      if (!(api.getState() as RootState).leads.byId[a.placeId]) return false;
+      await adapter.addActivity(a);
+      return true;
+    })
+      .then((saved) => {
+        if (!saved) {
+          api.dispatch(activityRemoved({ placeId: a.placeId, id: a.id }));
+          return;
+        }
         if (a.type === "note") notify.success("Anotação adicionada ao histórico");
       })
       .catch((err) => {
@@ -204,7 +252,7 @@ persistence.startListening({
 });
 
 persistence.startListening({
-  matcher: isAnyOf(leads.saveLead, leads.setLeadStatus, leads.markContacted, leads.setFollowUp),
+  matcher: isAnyOf(leads.saveLead, leads.setLeadStatus, leads.markContacted, leads.setFollowUp, leads.setLeadSale),
   effect: (action, api) => {
     const payload = (
       action as unknown as { payload: { placeId?: string; business?: { placeId: string } } }

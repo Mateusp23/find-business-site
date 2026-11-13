@@ -1,5 +1,5 @@
-import { createListenerMiddleware, isRejectedWithValue } from "@reduxjs/toolkit";
-import { notify } from "@/lib/notify";
+import { createListenerMiddleware, isAnyOf, isRejectedWithValue } from "@reduxjs/toolkit";
+import { errorMessage, notify } from "@/lib/notify";
 import { findBusinessApi } from "./api/findBusinessApi";
 import { runAnalysis } from "./slices/analysisSlice";
 
@@ -16,6 +16,25 @@ const API_ERROR_TITLES: Record<string, string | null> = {
   getMunicipios: "Não foi possível carregar as cidades",
   analyzeSite: null, // tratado em runAnalysis (tem o nome do site e o modo em lote)
   getHealth: "Não foi possível verificar as integrações",
+  getBilling: "Não foi possível carregar o seu plano",
+  startCheckout: "Não foi possível abrir o pagamento",
+  openBillingPortal: "Não foi possível abrir o portal de assinatura",
+  syncBilling: "Não foi possível atualizar a assinatura",
+};
+
+/** Limite do plano: aviso (não é erro) com atalho para a tela de planos. */
+export function notifyPlanLimit(title: string, description: string) {
+  notify.warning(title, {
+    description,
+    // Fora de componente (middleware do Redux): sem useRouter aqui.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    action: { label: "Ver planos", onPress: () => window.location.assign("/plano") },
+  });
+}
+
+const PLAN_LIMIT_TITLES: Record<string, string> = {
+  searchBusinesses: "Créditos de busca do mês esgotados",
+  analyzeSite: "Análises do mês esgotadas",
 };
 
 feedback.startListening({
@@ -33,8 +52,29 @@ feedback.startListening({
       return;
     }
     const endpoint = (action.meta as { arg: { endpointName: string } }).arg.endpointName;
+    if (code === "PLAN_LIMIT") {
+      // Análise avisa em runAnalysis.rejected (tem o modo em lote).
+      if (endpoint !== "analyzeSite") {
+        notifyPlanLimit(
+          PLAN_LIMIT_TITLES[endpoint] ?? "Limite do plano atingido",
+          errorMessage((action as { payload?: unknown }).payload),
+        );
+      }
+      return;
+    }
     const title = endpoint in API_ERROR_TITLES ? API_ERROR_TITLES[endpoint] : "Algo deu errado";
     if (title) notify.error(title, (action as { payload?: unknown }).payload);
+  },
+});
+
+/** Busca e análise gastam créditos: o resumo do plano é recarregado. */
+feedback.startListening({
+  matcher: isAnyOf(
+    findBusinessApi.endpoints.searchBusinesses.matchFulfilled,
+    findBusinessApi.endpoints.analyzeSite.matchFulfilled,
+  ),
+  effect: (_action, api) => {
+    api.dispatch(findBusinessApi.util.invalidateTags(["Billing"]));
   },
 });
 
@@ -82,6 +122,10 @@ feedback.startListening({
   actionCreator: runAnalysis.rejected,
   effect: ({ payload, error, meta }) => {
     if (meta.arg.silent) return;
-    notify.error("Não foi possível analisar o site", payload ?? error.message);
+    if (payload?.code === "PLAN_LIMIT") {
+      notifyPlanLimit("Análises do mês esgotadas", payload.message);
+      return;
+    }
+    notify.error("Não foi possível analisar o site", payload?.message ?? error.message);
   },
 });

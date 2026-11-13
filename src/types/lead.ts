@@ -49,6 +49,14 @@ export type LeadStatus =
   | "fechado"
   | "perdido";
 
+export interface LeadSale {
+  amountCents: number;
+  monthlyCents: number;
+  closedOn: string;
+  /** Último dia de vigência da mensalidade; null = sem término definido. */
+  recurringEndOn: string | null;
+}
+
 export interface SavedLead {
   business: Business;
   niche: string;
@@ -60,6 +68,7 @@ export interface SavedLead {
   lastContactAt: string | null;
   /** Próximo contato combinado (data "AAAA-MM-DD", sem hora). */
   nextFollowUpOn: string | null;
+  sale: LeadSale | null;
 }
 
 export type LeadActivityType =

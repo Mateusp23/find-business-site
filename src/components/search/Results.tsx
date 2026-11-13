@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Alert, Button, Skeleton, Spinner, Switch } from "@heroui/react";
 import { Gauge, SearchX } from "lucide-react";
 import { LeadCard } from "./LeadCard";
@@ -28,6 +29,7 @@ interface ResultsProps {
 
 export function Results({ params, data, isLoading, error }: ResultsProps) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const filter = useAppSelector((s) => s.search.filter);
   const hideWithSite = useAppSelector((s) => s.search.hideWithSite);
   const saved = useAppSelector((s) => s.leads.byId);
@@ -72,6 +74,7 @@ export function Results({ params, data, isLoading, error }: ResultsProps) {
     let done = 0;
     let weak = 0;
     let failed = 0;
+    let limitMessage: string | null = null;
     setBatch({ done: 0, total });
     const toastId = notify.loading(`Analisando ${total} ${total === 1 ? "site" : "sites"}...`, {
       description: "Cada site leva de 10 a 40 segundos.",
@@ -85,6 +88,11 @@ export function Results({ params, data, isLoading, error }: ResultsProps) {
         done++;
         if (runAnalysis.fulfilled.match(result)) {
           if (result.payload.isWeak) weak++;
+        } else if (result.payload?.code === "PLAN_LIMIT") {
+          // Acabaram as análises do plano: para a fila em vez de falhar site por site.
+          limitMessage = result.payload.message;
+          done--;
+          queue.length = 0;
         } else {
           failed++;
         }
@@ -94,6 +102,16 @@ export function Results({ params, data, isLoading, error }: ResultsProps) {
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
     setBatch(null);
+
+    if (limitMessage) {
+      notify.update(toastId, `Limite de análises do plano: ${done} de ${total} sites analisados`, {
+        description: limitMessage,
+        action: { label: "Ver planos", onPress: () => router.push("/plano") },
+        variant: "warning",
+        done: true,
+      });
+      return;
+    }
 
     const parts = [`${weak} ${weak === 1 ? "site fraco" : "sites fracos"}`];
     if (failed) parts.push(`${failed} não ${failed === 1 ? "abriu" : "abriram"} para análise`);

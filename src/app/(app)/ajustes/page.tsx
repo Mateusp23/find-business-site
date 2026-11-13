@@ -46,7 +46,8 @@ export default function AjustesPage() {
             <div>
               <p className="font-medium">Supabase</p>
               <p className="text-muted">
-                NEXT_PUBLIC_SUPABASE_URL e chave pública · login e dados na nuvem. Sem ele, modo local
+                NEXT_PUBLIC_SUPABASE_URL e chave pública · login e dados na nuvem. Sem ele, modo
+                local
               </p>
             </div>
             <StatusChip ok={mode === "supabase"} optional />
@@ -55,7 +56,8 @@ export default function AjustesPage() {
             <div>
               <p className="font-medium">Google Places API</p>
               <p className="text-muted">
-                GOOGLE_PLACES_API_KEY · busca de empresas. Sem ela, a busca roda em modo demonstração
+                GOOGLE_PLACES_API_KEY · busca de empresas. Sem ela, a busca roda em modo
+                demonstração
               </p>
             </div>
             <StatusChip ok={health?.googlePlaces} />
@@ -68,6 +70,16 @@ export default function AjustesPage() {
               </p>
             </div>
             <StatusChip ok={health?.pagespeed} optional />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="font-medium">Pagamentos (Stripe)</p>
+              <p className="text-muted">
+                STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, preços e SUPABASE_SECRET_KEY · assinaturas
+                dos planos. Sem eles, todo mundo fica no plano Grátis
+              </p>
+            </div>
+            <StatusChip ok={health?.billing} optional />
           </div>
           <div className="flex items-center justify-between gap-4">
             <div>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withApiErrors } from "@/lib/api/handler.server";
+import { consumeQuota, refundQuota } from "@/lib/api/quota.server";
 import { RATE_LIMITS, enforceRateLimit } from "@/lib/api/rateLimit.server";
 import { requireSession } from "@/lib/api/session.server";
 import { analyzeSite } from "@/lib/pagespeed.server";
@@ -14,5 +15,11 @@ export const GET = withApiErrors(async (request: Request) => {
     url: new URL(request.url).searchParams.get("url") ?? "",
   });
   await enforceRateLimit(session, RATE_LIMITS.analysis, request);
-  return NextResponse.json(await analyzeSite(url), { headers: { "Cache-Control": "no-store" } });
+  const charged = await consumeQuota(session, "analysis");
+  try {
+    return NextResponse.json(await analyzeSite(url), { headers: { "Cache-Control": "no-store" } });
+  } catch (err) {
+    if (charged) await refundQuota(session, "analysis", 1);
+    throw err;
+  }
 });

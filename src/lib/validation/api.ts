@@ -22,3 +22,14 @@ export const apiSiteAnalysisSchema = z.object({
 });
 
 export const apiUfSchema = z.string().regex(/^[A-Za-z]{2}$/, "UF inválida.");
+
+export const apiCheckoutSchema = z.object({
+  planId: z.enum(["pro", "agencia"], "Plano inválido."),
+});
+
+export const apiBillingSyncSchema = z.object({
+  sessionId: z
+    .string()
+    .regex(/^cs_[A-Za-z0-9_]{10,200}$/, "Sessão de pagamento inválida.")
+    .optional(),
+});
